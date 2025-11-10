@@ -90,6 +90,35 @@
 - createdAt (DateTime): 创建时间
 - updatedAt (DateTime): 更新时间
 
+### AI模型 (AIModel)
+表示AI模型的信息和安全审核状态
+
+**属性**:
+- id (String): 模型唯一标识符
+- name (String): 模型名称
+- version (String): 模型版本
+- description (String): 模型描述
+- filePath (String): 模型文件路径
+- securityStatus (String): 安全审核状态 (未审核/审核中/已通过/未通过)
+- vulnerabilityScanResult (String): 漏洞扫描结果
+- lastScanTime (DateTime): 最后扫描时间
+- complianceStatus (String): 合规性状态
+- createdAt (DateTime): 创建时间
+- updatedAt (DateTime): 更新时间
+
+### 监控指标 (MonitoringMetric)
+表示系统监控的关键指标
+
+**属性**:
+- id (String): 指标唯一标识符
+- name (String): 指标名称
+- value (Double): 指标值
+- threshold (Double): 阈值
+- alertStatus (String): 告警状态 (正常/警告/异常)
+- lastAlertTime (DateTime): 最后告警时间
+- serviceName (String): 关联服务名称
+- timestamp (DateTime): 时间戳
+
 ### 质量报告 (QualityReport)
 表示测试结果和质量分析报告
 
@@ -112,6 +141,8 @@
 - 一个测试用例可以关联一个需求
 - 一个资源池可以被多个测试任务使用
 - 一个测试任务生成一个质量报告
+- 一个AI模型可以被多个测试用例生成任务使用
+- 监控指标与各个服务实体关联
 
 ## 3. 状态转换
 
