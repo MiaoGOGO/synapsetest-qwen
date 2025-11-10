@@ -48,6 +48,10 @@
 - [ ] T016 Setup environment configuration management
 - [ ] T017 [P] Configure messaging systems (Kafka and RabbitMQ)
 - [ ] T018 [P] Setup monitoring and observability infrastructure (Prometheus, Grafana)
+- [ ] T019 [P] Implement service discovery mechanism (Nacos/Eureka)
+- [ ] T020 [P] Setup API gateway with load balancing (Spring Cloud Gateway)
+- [ ] T021 [P] Configure circuit breaker pattern (Hystrix/Resilience4j)
+- [ ] T022 [P] Setup distributed configuration management (Apollo/Nacos)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -63,29 +67,29 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T019 [P] [US1] Contract test for 创建测试任务 in backend/tests/contract/test_test_task_api.py
-- [ ] T020 [P] [US1] Contract test for 获取测试任务列表 in backend/tests/contract/test_test_task_api.py
-- [ ] T021 [P] [US1] Integration test for 测试任务创建和推荐流程 in backend/tests/integration/test_test_task_workflow.py
+- [ ] T023 [P] [US1] Contract test for 创建测试任务 in backend/tests/contract/test_test_task_api.py
+- [ ] T024 [P] [US1] Contract test for 获取测试任务列表 in backend/tests/contract/test_test_task_api.py
+- [ ] T025 [P] [US1] Integration test for 测试任务创建和推荐流程 in backend/tests/integration/test_test_task_workflow.py
 
 ### Implementation for User Story 1
 
-- [ ] T022 [P] [US1] Create TestTask model in backend/src/models/test_task.py
-- [ ] T023 [P] [US1] Create TestEnvironment model in backend/src/models/test_environment.py
-- [ ] T024 [P] [US1] Create TestVersion model in backend/src/models/test_version.py
-- [ ] T025 [P] [US1] Create ResourcePool model in backend/src/models/resource_pool.py
-- [ ] T026 [US1] Implement TestTaskService in backend/src/services/test_task_service.py (depends on T022-T025)
-- [ ] T027 [US1] Implement TestEnvironmentService in backend/src/services/test_environment_service.py
-- [ ] T028 [US1] Implement TestVersionService in backend/src/services/test_version_service.py
-- [ ] T029 [US1] Implement ResourcePoolService in backend/src/services/resource_pool_service.py
-- [ ] T030 [US1] Implement 测试策略推荐算法 in backend/src/services/test_recommendation_service.py
-- [ ] T031 [US1] Implement TestTaskController in backend/src/api/test_task_controller.py
-- [ ] T032 [US1] Implement TestEnvironmentController in backend/src/api/test_environment_controller.py
-- [ ] T033 [US1] Implement TestVersionController in backend/src/api/test_version_controller.py
-- [ ] T034 [US1] Add validation and error handling for all endpoints
-- [ ] T035 [US1] Add logging for user story 1 operations
-- [ ] T036 [P] [US1] Create frontend components for 测试任务创建页面 in frontend/src/components/test-task/CreateTestTask.jsx
-- [ ] T037 [P] [US1] Create frontend components for 测试任务列表页面 in frontend/src/components/test-task/TestTaskList.jsx
-- [ ] T038 [US1] Implement frontend service for test task API in frontend/src/services/testTaskService.js
+- [ ] T026 [P] [US1] Create TestTask model in backend/src/models/test_task.py
+- [ ] T027 [P] [US1] Create TestEnvironment model in backend/src/models/test_environment.py
+- [ ] T028 [P] [US1] Create TestVersion model in backend/src/models/test_version.py
+- [ ] T029 [P] [US1] Create ResourcePool model in backend/src/models/resource_pool.py
+- [ ] T030 [US1] Implement TestTaskService in backend/src/services/test_task_service.py (depends on T026-T029)
+- [ ] T031 [US1] Implement TestEnvironmentService in backend/src/services/test_environment_service.py
+- [ ] T032 [US1] Implement TestVersionService in backend/src/services/test_version_service.py
+- [ ] T033 [US1] Implement ResourcePoolService in backend/src/services/resource_pool_service.py
+- [ ] T034 [US1] Implement 测试策略推荐算法 in backend/src/services/test_recommendation_service.py
+- [ ] T035 [US1] Implement TestTaskController in backend/src/api/test_task_controller.py
+- [ ] T036 [US1] Implement TestEnvironmentController in backend/src/api/test_environment_controller.py
+- [ ] T037 [US1] Implement TestVersionController in backend/src/api/test_version_controller.py
+- [ ] T038 [US1] Add validation and error handling for all endpoints
+- [ ] T039 [US1] Add logging for user story 1 operations
+- [ ] T040 [P] [US1] Create frontend components for 测试任务创建页面 in frontend/src/components/test-task/CreateTestTask.jsx
+- [ ] T041 [P] [US1] Create frontend components for 测试任务列表页面 in frontend/src/components/test-task/TestTaskList.jsx
+- [ ] T042 [US1] Implement frontend service for test task API in frontend/src/services/testTaskService.js
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -99,24 +103,24 @@
 
 ### Tests for User Story 2 (OPTIONAL - only if tests requested) ⚠️
 
-- [ ] T039 [P] [US2] Contract test for AI生成测试用例 in backend/tests/contract/test_ai_testcase_api.py
-- [ ] T040 [P] [US2] Contract test for 创建测试用例 in backend/tests/contract/test_testcase_api.py
-- [ ] T041 [P] [US2] Integration test for AI测试用例生成流程 in backend/tests/integration/test_ai_testcase_workflow.py
+- [ ] T043 [P] [US2] Contract test for AI生成测试用例 in backend/tests/contract/test_ai_testcase_api.py
+- [ ] T044 [P] [US2] Contract test for 创建测试用例 in backend/tests/contract/test_testcase_api.py
+- [ ] T045 [P] [US2] Integration test for AI测试用例生成流程 in backend/tests/integration/test_ai_testcase_workflow.py
 
 ### Implementation for User Story 2
 
-- [ ] T042 [P] [US2] Create TestCase model in backend/src/models/test_case.py
-- [ ] T043 [P] [US2] Create AIModel model in backend/src/models/ai_model.py
-- [ ] T044 [US2] Implement TestCaseService in backend/src/services/test_case_service.py
-- [ ] T045 [US2] Implement AI测试用例生成服务 in backend/src/services/ai_testcase_generation_service.py (depends on T042-T044)
-- [ ] T046 [US2] Implement TestCaseController in backend/src/api/test_case_controller.py
-- [ ] T047 [US2] Implement AI测试用例去重和优化算法 in backend/src/services/ai_testcase_optimization_service.py
-- [ ] T048 [US2] Implement AI模型管理服务 in backend/src/services/ai_model_service.py
-- [ ] T049 [US2] Add validation and error handling for AI测试用例生成
-- [ ] T050 [US2] Add logging for AI测试用例生成操作
-- [ ] T051 [P] [US2] Create frontend components for AI测试用例生成页面 in frontend/src/components/test-case/AITestCaseGeneration.jsx
-- [ ] T052 [P] [US2] Create frontend components for 测试用例列表页面 in frontend/src/components/test-case/TestCaseList.jsx
-- [ ] T053 [US2] Implement frontend service for test case API in frontend/src/services/testCaseService.js
+- [ ] T046 [P] [US2] Create TestCase model in backend/src/models/test_case.py
+- [ ] T047 [P] [US2] Create AIModel model in backend/src/models/ai_model.py
+- [ ] T048 [US2] Implement TestCaseService in backend/src/services/test_case_service.py
+- [ ] T049 [US2] Implement AI测试用例生成服务 in backend/src/services/ai_testcase_generation_service.py (depends on T046-T047)
+- [ ] T050 [US2] Implement TestCaseController in backend/src/api/test_case_controller.py
+- [ ] T051 [US2] Implement AI测试用例去重和优化算法 in backend/src/services/ai_testcase_optimization_service.py
+- [ ] T052 [US2] Implement AI模型管理服务 in backend/src/services/ai_model_service.py
+- [ ] T053 [US2] Add validation and error handling for AI测试用例生成
+- [ ] T054 [US2] Add logging for AI测试用例生成操作
+- [ ] T055 [P] [US2] Create frontend components for AI测试用例生成页面 in frontend/src/components/test-case/AITestCaseGeneration.jsx
+- [ ] T056 [P] [US2] Create frontend components for 测试用例列表页面 in frontend/src/components/test-case/TestCaseList.jsx
+- [ ] T057 [US2] Implement frontend service for test case API in frontend/src/services/testCaseService.js
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -130,26 +134,26 @@
 
 ### Tests for User Story 3 (OPTIONAL - only if tests requested) ⚠️
 
-- [ ] T054 [P] [US3] Contract test for 获取测试任务实时状态 in backend/tests/contract/test_monitoring_api.py
-- [ ] T055 [P] [US3] Contract test for 获取质量报告 in backend/tests/contract/test_report_api.py
-- [ ] T056 [P] [US3] Integration test for 监控仪表盘数据展示 in backend/tests/integration/test_monitoring_workflow.py
+- [ ] T058 [P] [US3] Contract test for 获取测试任务实时状态 in backend/tests/contract/test_monitoring_api.py
+- [ ] T059 [P] [US3] Contract test for 获取质量报告 in backend/tests/contract/test_report_api.py
+- [ ] T060 [P] [US3] Integration test for 监控仪表盘数据展示 in backend/tests/integration/test_monitoring_workflow.py
 
 ### Implementation for User Story 3
 
-- [ ] T057 [P] [US3] Create QualityReport model in backend/src/models/quality_report.py
-- [ ] T058 [P] [US3] Create MonitoringData model in backend/src/models/monitoring_data.py
-- [ ] T059 [US3] Implement QualityReportService in backend/src/services/quality_report_service.py
-- [ ] T060 [US3] Implement MonitoringService in backend/src/services/monitoring_service.py
-- [ ] T061 [US3] Implement ReportingService in backend/src/services/reporting_service.py
-- [ ] T062 [US3] Implement MonitoringController in backend/src/api/monitoring_controller.py
-- [ ] T063 [US3] Implement ReportController in backend/src/api/report_controller.py
-- [ ] T064 [US3] Implement 质量追溯算法 in backend/src/services/quality_traceability_service.py
-- [ ] T065 [US3] Add validation and error handling for monitoring and reporting
-- [ ] T066 [US3] Add logging for monitoring and reporting operations
-- [ ] T067 [P] [US3] Create frontend components for 监控仪表盘页面 in frontend/src/components/monitoring/Dashboard.jsx
-- [ ] T068 [P] [US3] Create frontend components for 质量报告页面 in frontend/src/components/report/QualityReport.jsx
-- [ ] T069 [US3] Implement frontend service for monitoring API in frontend/src/services/monitoringService.js
-- [ ] T070 [US3] Implement frontend service for reporting API in frontend/src/services/reportService.js
+- [ ] T061 [P] [US3] Create QualityReport model in backend/src/models/quality_report.py
+- [ ] T062 [P] [US3] Create MonitoringData model in backend/src/models/monitoring_data.py
+- [ ] T063 [US3] Implement QualityReportService in backend/src/services/quality_report_service.py
+- [ ] T064 [US3] Implement MonitoringService in backend/src/services/monitoring_service.py
+- [ ] T065 [US3] Implement ReportingService in backend/src/services/reporting_service.py
+- [ ] T066 [US3] Implement MonitoringController in backend/src/api/monitoring_controller.py
+- [ ] T067 [US3] Implement ReportController in backend/src/api/report_controller.py
+- [ ] T068 [US3] Implement 质量追溯算法 in backend/src/services/quality_traceability_service.py
+- [ ] T069 [US3] Add validation and error handling for monitoring and reporting
+- [ ] T070 [US3] Add logging for monitoring and reporting operations
+- [ ] T071 [P] [US3] Create frontend components for 监控仪表盘页面 in frontend/src/components/monitoring/Dashboard.jsx
+- [ ] T072 [P] [US3] Create frontend components for 质量报告页面 in frontend/src/components/report/QualityReport.jsx
+- [ ] T073 [US3] Implement frontend service for monitoring API in frontend/src/services/monitoringService.js
+- [ ] T074 [US3] Implement frontend service for reporting API in frontend/src/services/reportService.js
 
 **Checkpoint**: All user stories should now be independently functional
 
