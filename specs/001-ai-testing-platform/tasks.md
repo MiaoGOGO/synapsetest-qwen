@@ -164,11 +164,13 @@
 - [ ] T073 Performance optimization across all stories
 - [ ] T074 [P] Additional unit tests in backend/tests/unit/
 - [ ] T075 [P] Additional unit tests in frontend/tests/unit/
-- [ ] T076 Security hardening
-- [ ] T077 Run quickstart.md validation
-- [ ] T078 [P] Implement end-to-end tests in tests/e2e/
-- [ ] T079 Update API documentation based on final implementation
-- [ ] T080 Prepare deployment packages and scripts
+- [ ] T076 [P] AI生成代码安全审核 - 代码逻辑验证 in backend/src/security/ai_code_security_review.py
+- [ ] T077 [P] AI生成代码安全审核 - 安全漏洞扫描 in backend/src/security/ai_vulnerability_scanner.py
+- [ ] T078 [P] AI生成代码安全审核 - 合规性检查 in backend/src/security/ai_compliance_checker.py
+- [ ] T079 Run quickstart.md validation
+- [ ] T080 [P] Implement end-to-end tests in tests/e2e/
+- [ ] T081 Update API documentation based on final implementation
+- [ ] T082 Prepare deployment packages and scripts
 
 ---
 
