@@ -140,20 +140,20 @@
 
 ### Implementation for User Story 3
 
-- [ ] T061 [P] [US3] Create QualityReport model in backend/src/models/quality_report.py
-- [ ] T062 [P] [US3] Create MonitoringData model in backend/src/models/monitoring_data.py
-- [ ] T063 [US3] Implement QualityReportService in backend/src/services/quality_report_service.py
-- [ ] T064 [US3] Implement MonitoringService in backend/src/services/monitoring_service.py
-- [ ] T065 [US3] Implement ReportingService in backend/src/services/reporting_service.py
-- [ ] T066 [US3] Implement MonitoringController in backend/src/api/monitoring_controller.py
-- [ ] T067 [US3] Implement ReportController in backend/src/api/report_controller.py
-- [ ] T068 [US3] Implement 质量追溯算法 in backend/src/services/quality_traceability_service.py
-- [ ] T069 [US3] Add validation and error handling for monitoring and reporting
-- [ ] T070 [US3] Add logging for monitoring and reporting operations
-- [ ] T071 [P] [US3] Create frontend components for 监控仪表盘页面 in frontend/src/components/monitoring/Dashboard.jsx
-- [ ] T072 [P] [US3] Create frontend components for 质量报告页面 in frontend/src/components/report/QualityReport.jsx
-- [ ] T073 [US3] Implement frontend service for monitoring API in frontend/src/services/monitoringService.js
-- [ ] T074 [US3] Implement frontend service for reporting API in frontend/src/services/reportService.js
+- [x] T061 [P] [US3] Create QualityReport model in backend/src/models/quality_report.py
+- [x] T062 [P] [US3] Create MonitoringData model in backend/src/models/monitoring_data.py
+- [x] T063 [US3] Implement QualityReportService in backend/src/services/quality_report_service.py
+- [x] T064 [US3] Implement MonitoringService in backend/src/services/monitoring_service.py
+- [x] T065 [US3] Implement ReportingService in backend/src/services/reporting_service.py
+- [x] T066 [US3] Implement MonitoringController in backend/src/api/monitoring_controller.py
+- [x] T067 [US3] Implement ReportController in backend/src/api/report_controller.py
+- [x] T068 [US3] Implement 质量追溯算法 in backend/src/services/quality_traceability_service.py
+- [x] T069 [US3] Add validation and error handling for monitoring and reporting
+- [x] T070 [US3] Add logging for monitoring and reporting operations
+- [x] T071 [P] [US3] Create frontend components for 监控仪表盘页面 in frontend/src/components/monitoring/Dashboard.jsx
+- [x] T072 [P] [US3] Create frontend components for 质量报告页面 in frontend/src/components/report/QualityReport.jsx
+- [x] T073 [US3] Implement frontend service for monitoring API in frontend/src/services/monitoringService.js
+- [x] T074 [US3] Implement frontend service for reporting API in frontend/src/services/reportService.js
 
 **Checkpoint**: All user stories should now be independently functional
 
