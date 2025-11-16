@@ -9,40 +9,39 @@
 
 ## 1. Technology Stack & Framework
 
-### Primary Framework: Spring Boot 3.1.5
+### Primary Framework: Spring Boot 2.7.18
 - **Language:** Java 11
 - **Build Tool:** Maven 3.x
-- **Parent POM:** spring-boot-starter-parent:3.1.5
+- **Parent POM:** spring-boot-starter-parent:2.7.18
 
 ### Key Technologies:
 - **Web Framework:** Spring Boot Web (REST APIs)
-- **ORM/Data Access:** Spring Data JPA + Hibernate
-- **Primary Database:** PostgreSQL (relational data)
-- **NoSQL Database:** MongoDB (AI models, reports, monitoring data)
-- **Cache:** Redis (session/cache management)
+- **ORM/Data Access:** MyBatis 2.3.1 (XML-based SQL mappings)
+- **Primary Database:** MySQL 8.0 (relational data)
+- **NoSQL Database:** MongoDB (AI models, reports, monitoring) - **@Profile("mongodb") required**
+- **Cache:** Redis (disabled by default in development)
 - **Message Queues:** 
-  - Kafka (stream processing)
-  - RabbitMQ (async messaging)
-- **API Gateway:** Spring Cloud Gateway
-- **Resilience:** Resilience4j (circuit breaker pattern)
+  - Kafka (disabled by default in development)
+  - RabbitMQ (disabled by default in development)
+- **API Gateway:** ~~Spring Cloud Gateway~~ (commented out - incompatible with Spring MVC)
+- **Resilience:** ~~Resilience4j~~ (commented out - version compatibility issues)
 - **Monitoring:** Micrometer + Prometheus
 - **Testing Framework:** JUnit 5, Spring Boot Test
 
 ### Dependencies Summary:
 ```xml
 - spring-boot-starter-web
-- spring-boot-starter-data-jpa (PostgreSQL via Hibernate)
-- spring-boot-starter-data-mongodb (MongoDB for AI/reports)
-- spring-boot-starter-data-redis
-- spring-cloud-starter-gateway
-- spring-cloud-starter-config
-- spring-kafka & spring-kafka-test
-- spring-boot-starter-amqp (RabbitMQ)
-- resilience4j-spring-boot3 (v2.0.2)
+- mybatis-spring-boot-starter (v2.3.1) - Replaces JPA
+- mysql-connector-j (MySQL driver)
+- spring-boot-starter-data-mongodb (@Profile required)
+- spring-boot-starter-data-redis (disabled in dev)
+- spring-kafka (disabled in dev)
+- spring-boot-starter-amqp (disabled in dev)
 - micrometer-registry-prometheus
 - spring-boot-starter-actuator
 - spring-boot-starter-validation
-- lombok (utility library)
+- spring-boot-starter-security
+- lombok (with annotation processor configuration)
 ```
 
 ---
@@ -56,20 +55,28 @@
 │   ├── main/
 │   │   ├── java/com/synapsetest/testmanagement/
 │   │   │   ├── config/                 (Spring configurations)
+│   │   │   ├── constants/              (ApiVersion constants)
 │   │   │   ├── controller/             (REST API endpoints)
 │   │   │   ├── service/                (Business logic)
-│   │   │   ├── model/                  (Domain models/entities)
-│   │   │   ├── repository/             (Data access layer)
+│   │   │   ├── model/                  (POJOs - no JPA annotations)
+│   │   │   ├── mapper/                 (MyBatis Mapper interfaces)
+│   │   │   ├── repository/             (MongoDB repositories with @Profile)
 │   │   │   ├── dto/                    (Data transfer objects)
 │   │   │   ├── entity/                 (Base entity classes)
 │   │   │   ├── exception/              (Custom exceptions)
 │   │   │   ├── interceptor/            (HTTP interceptors)
 │   │   │   └── TestManagementApplication.java
 │   │   └── resources/
-│   │       ├── application.yml
+│   │       ├── application.yml         (no context-path)
 │   │       ├── application-config.yml
 │   │       ├── service-discovery.yml
-│   │       └── schema.sql
+│   │       ├── schema.sql              (MySQL schema)
+│   │       └── mapper/                 (MyBatis XML mappings)
+│   │           ├── TestCaseMapper.xml
+│   │           ├── TestTaskMapper.xml
+│   │           ├── ResourcePoolMapper.xml
+│   │           ├── TestEnvironmentMapper.xml
+│   │           └── TestVersionMapper.xml
 │   └── tests/
 │       ├── unit/                       (Unit tests)
 │       ├── integration/                (Integration tests)
@@ -97,15 +104,15 @@
 ### 3.2 Controllers (REST API Endpoints)
 **Location:** `/src/main/java/com/synapsetest/testmanagement/controller/`
 
-| Controller | Endpoints | Purpose |
-|-----------|-----------|---------|
-| `TestTaskController.java` | `/api/v1/test-tasks` | Task CRUD, start/cancel operations |
-| `TestCaseController.java` | `/api/v1/test-cases` | Test case management |
-| `TestEnvironmentController.java` | `/api/v1/test-environments` | Environment configuration |
-| `TestVersionController.java` | `/api/v1/test-versions` | Version management |
-| `ReportController.java` | `/api/v1/reports` | Quality report endpoints |
-| `MonitoringController.java` | `/api/v1/monitoring` | Real-time monitoring data |
-| `HealthController.java` | `/api/v1/health` | Health check endpoint |
+| Controller | Endpoints | Purpose | Notes |
+|-----------|-----------|---------|-------|
+| `HealthController.java` | `/health` | Health check endpoint | System endpoint (no version) |
+| `TestTaskController.java` | `/api/v1/test-tasks` | Task CRUD, start/cancel operations | Uses ApiVersion.V1 |
+| `TestCaseController.java` | `/api/v1/test-cases` | Test case management | Optional AI services |
+| `TestEnvironmentController.java` | `/api/v1/test-environments` | Environment configuration | Uses ApiVersion.V1 |
+| `TestVersionController.java` | `/api/v1/test-versions` | Version management | Uses ApiVersion.V1 |
+| `ReportController.java` | `/api/v1/reports` | Quality report endpoints | @Profile("mongodb") |
+| `MonitoringController.java` | `/api/v1/monitoring` | Real-time monitoring data | @Profile("mongodb") |
 
 ### 3.3 Service Layer (Business Logic)
 **Location:** `/src/main/java/com/synapsetest/testmanagement/service/`
@@ -135,48 +142,63 @@
 | `ReportingService.java` | Generate detailed test reports |
 | `QualityTraceabilityService.java` | Track quality metrics and traceability |
 
-### 3.4 Data Models (Domain Entities)
+### 3.4 Data Models (POJOs - MyBatis)
 **Location:** `/src/main/java/com/synapsetest/testmanagement/model/`
 
-#### User Story 1 Models (PostgreSQL)
+#### User Story 1 Models (MySQL)
 ```java
-TestTask.java              // Fields: name, description, environment, version, testScope, status, priority, createdBy
-TestEnvironment.java       // Fields: name, description, config (JSONB), status
-TestVersion.java           // Fields: name, description, productVersion, baselineVersion, config (JSONB)
-ResourcePool.java          // Fields: name, type (VM/CONTAINER/DEVICE), capacity, used, config, status
+TestTask.java              // Fields: String id, name, description, environment, version, testScope, status, priority, createdBy
+                           // No JPA annotations, manual ID generation
+TestEnvironment.java       // Fields: name, description, Map<String,String> config, status
+                           // JSON column via JsonTypeHandler
+TestVersion.java           // Fields: name, description, productVersion, releaseDate, Map<String,String> config
+ResourcePool.java          // Fields: name, type, capacity, allocated (renamed from 'used'), Map<String,String> config, status
 ```
 
 #### User Story 2 Models
 ```java
-TestCase.java              // PostgreSQL: title, description, steps, expectedResults, priority, type, status, tags, createdBy
+TestCase.java              // MySQL: title, description, List<String> steps, expectedResult, priority, type, status, List<String> tags, createdBy
+                           // JSON columns (steps, tags) via JsonTypeHandler
 AIModel.java               // MongoDB: name, version, description, filePath, securityStatus, vulnerabilityScanResult, complianceStatus, metrics
+                           // @Document annotation, @Profile("mongodb")
 ```
 
 #### User Story 3 Models (MongoDB)
 ```java
 QualityReport.java         // taskId, name, summary, testResults[], defectStats, performanceMetrics, riskAssessment
+                           // @Document annotation, @Profile("mongodb")
 MonitoringData.java        // taskId, status, progress, executedCases, passedCases, failedCases, resourceUsage, performanceMetrics
+                           // @Document annotation, @Profile("mongodb")
 ```
 
 #### Base Entity
 ```java
-BaseEntity.java            // Abstract parent: id (UUID), createdAt, updatedAt
+BaseEntity.java            // Abstract parent: String id (changed from UUID), LocalDateTime createdAt, updatedAt
+                           // No JPA annotations (@Id, @GeneratedValue removed)
 ```
 
-### 3.5 Data Access Layer (Repositories)
-**Location:** `/src/main/java/com/synapsetest/testmanagement/repository/`
+### 3.5 Data Access Layer (Mappers & Repositories)
+**Location:** `/src/main/java/com/synapsetest/testmanagement/mapper/` and `/repository/`
 
-#### PostgreSQL Repositories (JPA)
-- `TestTaskRepository` - Methods: findByStatus(), findByEnvironment(), findByCreatedBy(), findByStatusOrderByPriorityDesc()
-- `TestCaseRepository` - Methods: findByType(), findByStatus(), findByCreatedBy()
-- `TestEnvironmentRepository` - Methods: findByStatus(), findByName()
-- `TestVersionRepository` - Methods: findByProductVersion()
-- `ResourcePoolRepository` - Methods: findByStatus(), findByType(), findByStatusAndType()
+#### MyBatis Mappers (MySQL)
+- `TestTaskMapper` - @Mapper interface, XML: backend/src/main/resources/mapper/TestTaskMapper.xml
+  - Methods: selectById(), selectAll(), selectByStatus(), insert(), update(), deleteById()
+- `TestCaseMapper` - Uses JsonTypeHandler for steps/tags columns
+  - Methods: selectById(), selectByType(), selectByStatus(), insert(), update(), deleteById()
+- `TestEnvironmentMapper` - Uses JsonTypeHandler for config
+  - Methods: selectById(), selectByName(), selectByStatus(), insert(), update()
+- `TestVersionMapper` - Uses JsonTypeHandler for config
+  - Methods: selectById(), selectByName(), selectByProductVersion(), insert(), update()
+- `ResourcePoolMapper` - Uses JsonTypeHandler for config
+  - Methods: selectById(), selectByStatus(), selectByType(), selectByStatusAndType()
 
-#### MongoDB Repositories
-- `QualityReportRepository` - Methods: findByTaskId(), findByStatus(), findByGeneratedAtBetween(), findTop10ByOrderByGeneratedAtDesc()
-- `MonitoringDataRepository` - Methods: findByTaskId(), findByStatus()
-- `AIModelRepository` - Methods: findBySecurityStatus(), findByName()
+#### MongoDB Repositories (@Profile("mongodb") required)
+- `QualityReportRepository` - @Repository with @Profile("mongodb")
+  - Methods: findByTaskId(), findByStatus(), findByGeneratedAtBetween(), findTop10ByOrderByGeneratedAtDesc()
+- `MonitoringDataRepository` - @Repository with @Profile("mongodb")
+  - Methods: findByTaskId(), findByStatus()
+- `AIModelRepository` - @Repository with @Profile("mongodb")
+  - Methods: findBySecurityStatus(), findByName()
 
 ### 3.6 DTOs (Data Transfer Objects)
 **Location:** `/src/main/java/com/synapsetest/testmanagement/dto/`
@@ -207,46 +229,50 @@ BaseEntity.java            // Abstract parent: id (UUID), createdAt, updatedAt
 
 ## 4. Database Architecture
 
-### PostgreSQL Schema (Relational Data)
-**Connection:** `jdbc:postgresql://localhost:5432/test_management`
+### MySQL Schema (MyBatis XML Mappings)
+**Connection:** `jdbc:mysql://localhost:3306/test_management`
 
 #### Tables
 1. **test_tasks** (User Story 1)
-   - PK: id (UUID)
-   - Fields: name, description, environment, version, testScope, status, priority, createdBy
+   - PK: id (CHAR(36) - UUID string)
+   - Fields: name, description, environment, version, test_scope, status, priority, created_by
    - Indexes: idx_test_tasks_status, idx_test_tasks_created_at
    - Constraints: status in (PENDING, RUNNING, COMPLETED, CANCELLED), priority 0-10
+   - Timestamps: created_at, updated_at (TIMESTAMP with AUTO UPDATE)
 
 2. **test_cases** (User Story 2)
-   - PK: id (UUID)
-   - Fields: title, description, steps (JSONB), expectedResults, priority, type, status, tags, createdBy
+   - PK: id (CHAR(36))
+   - Fields: title, description, steps (JSON), expected_result, priority, type, status, tags (JSON), created_by
    - Indexes: idx_test_cases_type, idx_test_cases_status
+   - JSON columns handled by JsonTypeHandler
 
 3. **test_environments** (User Story 1)
-   - PK: id (UUID)
-   - Fields: name (unique), description, config (JSONB), status
+   - PK: id (CHAR(36))
+   - Fields: name (unique), description, url, config (JSON), status
    - Index: idx_test_environments_status
 
 4. **test_versions** (User Story 1)
-   - PK: id (UUID)
-   - Fields: name, description, productVersion, baselineVersion, config (JSONB)
+   - PK: id (CHAR(36))
+   - Fields: name, description, product_version, release_date, config (JSON)
 
 5. **resource_pools** (User Story 1)
-   - PK: id (UUID)
-   - Fields: name (unique), description, type, capacity, used, config, status
-   - Constraint: used <= capacity
+   - PK: id (CHAR(36))
+   - Fields: name (unique), description, type, capacity, allocated (renamed from 'used'), location, config (JSON), status
+   - Constraint: allocated <= capacity
    - Index: idx_resource_pools_status
 
 6. **task_test_cases** (Association)
    - PK: (task_id, test_case_id)
-   - FKs: References test_tasks, test_cases
+   - FKs: References test_tasks, test_cases with CASCADE
    - Field: execution_order
 
 #### Features
-- Auto-generated UUIDs for all primary keys
-- Automatic `created_at`/`updated_at` timestamp management via triggers
-- PostgreSQL JSONB support for flexible config storage
+- Manual UUID generation via UUID.randomUUID().toString()
+- Automatic `created_at`/`updated_at` via MySQL TIMESTAMP DEFAULT and ON UPDATE
+- MySQL JSON type for flexible config storage
+- Custom JsonTypeHandler for Map<String, String> and List<String> JSON fields
 - Foreign key constraints with CASCADE delete
+- ENGINE=InnoDB, CHARSET=utf8mb4
 
 ### MongoDB Collections (NoSQL - Flexible Schema)
 **Connection:** `mongodb://localhost:27017/test_management_ai`
@@ -446,27 +472,40 @@ BaseEntity.java            // Abstract parent: id (UUID), createdAt, updatedAt
 ```yaml
 server:
   port: 8080
-  servlet:
-    context-path: /api/v1
+  # NO context-path - API versioning in Controllers via ApiVersion.V1
 
-datasources:
-  PostgreSQL: jdbc:postgresql://localhost:5432/test_management
-  MongoDB: mongodb://localhost:27017/test_management_ai
-  Redis: localhost:6379
-  Kafka: localhost:9092
-  RabbitMQ: localhost:5672
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/test_management
+    username: root
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  
+  autoconfigure:
+    exclude:
+      - MongoDataAutoConfiguration
+      - MongoAutoConfiguration
+      - RedisAutoConfiguration
+      - KafkaAutoConfiguration
+      - RabbitAutoConfiguration
+      - HibernateJpaAutoConfiguration  # Using MyBatis instead
+      - JpaRepositoriesAutoConfiguration
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.synapsetest.testmanagement.model
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
 
 management:
   endpoints:
-    - health, info, metrics, prometheus
-  metrics:
-    prometheus: enabled
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
 
-resilience4j:
-  circuitbreaker:
-    - sliding-window-size: 10
-    - failure-rate-threshold: 50%
-    - wait-duration: 5s
+# Resilience4j - Temporarily disabled due to version compatibility
+# resilience4j: ...
 ```
 
 ---
@@ -474,30 +513,39 @@ resilience4j:
 ## 9. Notable Architecture Decisions
 
 1. **Hybrid Database Strategy**
-   - PostgreSQL for structured, relational data (tasks, cases, environments)
-   - MongoDB for flexible schema data (AI models, reports, monitoring)
-   - Redis for caching and sessions
+   - **MySQL** for structured, relational data (tasks, cases, environments, resources)
+   - **MyBatis XML mappings** for SQL control and flexibility
+   - **MongoDB** for flexible schema data (AI models, reports, monitoring) - **@Profile("mongodb") required**
+   - Redis, Kafka, RabbitMQ disabled by default in development
 
-2. **Microservices-Ready**
-   - Spring Cloud Gateway for API routing
-   - Spring Cloud Config for distributed configuration
-   - Kafka/RabbitMQ for async communication
+2. **MyBatis Migration (from JPA/Hibernate)**
+   - XML-based SQL mappings for better control
+   - Custom `JsonTypeHandler` for MySQL JSON columns
+   - Manual ID generation using `UUID.randomUUID().toString()`
+   - Manual timestamp management in service layer
 
-3. **Resilience & Observability**
-   - Resilience4j for circuit breaker pattern
-   - Prometheus metrics collection
-   - Structured logging with SLF4J
+3. **Profile-Based Loading**
+   - Core features work without MongoDB
+   - AI features require `--spring.profiles.active=mongodb`
+   - Optional dependencies via `@Autowired(required = false)`
 
-4. **Security**
-   - Spring Security integration
+4. **API Versioning Strategy**
+   - No `context-path` in application.yml
+   - Version defined in Controllers via `ApiVersion.V1` constant
+   - System endpoints (e.g., `/health`) remain unversioned
+   - Business APIs use `/api/v1` prefix
+
+5. **Security**
+   - Spring Security with `SecurityFilterChain` (Spring Boot 2.7.x compatible)
+   - Development mode: `/api/v1/**` permitAll
    - Auth interceptor for request validation
-   - AI model security audit tracking
+   - AI model security audit tracking (when MongoDB profile active)
 
-5. **Code Quality**
-   - Lombok for reducing boilerplate
-   - Entity validation with JSR-303
-   - Global exception handling
-   - Transactional service methods
+6. **Code Quality**
+   - Lombok with explicit annotation processor configuration
+   - Bean validation with JSR-303 (`@Valid`)
+   - Global exception handling (`GlobalExceptionHandler`)
+   - No `@Transactional` (MyBatis doesn't require it for simple CRUD)
 
 ---
 
@@ -505,43 +553,51 @@ resilience4j:
 
 | Category | Count |
 |----------|-------|
-| **Models/Entities** | 8 core models |
+| **Models/POJOs** | 8 core models (no JPA annotations) |
 | **Services** | 13 services |
 | **Controllers** | 7 controllers |
-| **Repositories** | 8 repositories |
+| **MyBatis Mappers** | 5 mappers (XML + interface) |
+| **MongoDB Repositories** | 3 repositories (@Profile) |
 | **DTOs** | 6 DTO classes |
-| **Configuration Classes** | 6 config files |
-| **PostgreSQL Tables** | 6 tables |
-| **MongoDB Collections** | 3 collections |
+| **Configuration Classes** | 6+ config files |
+| **MySQL Tables** | 6 tables |
+| **MyBatis XML Files** | 5 mapper XMLs |
+| **MongoDB Collections** | 3 collections (@Profile) |
 | **API Endpoints** | 30+ RESTful endpoints |
-| **Java Versions** | 11+ |
+| **Java Version** | 11 |
+| **Spring Boot Version** | 2.7.18 |
 
 ---
 
 ## 11. Deployment Artifacts
 
 - **Docker:** Dockerfile present for containerization
-- **Build Tool:** Maven with standard plugins
+- **Build Tool:** Maven with standard plugins (including Lombok annotation processor)
 - **Docker Compose:** Available for multi-service orchestration
-- **Database:** Automatic schema creation via Hibernate/JPA
+- **Database:** Manual schema creation via `schema.sql` (MySQL DDL)
+- **Schema File:** backend/src/main/resources/schema.sql
 
 ---
 
 ## 12. Development Guidelines
 
 ### Adding New Features
-1. Create model in `/model/` (extends BaseEntity for PostgreSQL entities)
-2. Create repository in `/repository/` (extend JpaRepository or MongoRepository)
-3. Create service in `/service/` with @Transactional methods
-4. Create controller in `/controller/` with @RestController
-5. Add DTOs in `/dto/` for request/response mapping
-6. Add database schema changes in `schema.sql`
+1. Create POJO model in `/model/` (extends BaseEntity, NO JPA annotations)
+2. Create MyBatis Mapper interface in `/mapper/` with `@Mapper`
+3. Create MyBatis XML mapping in `/resources/mapper/` with SQL statements
+4. If using JSON columns, add `JsonTypeHandler` to resultMap and insert/update
+5. Create service in `/service/` with manual ID generation and timestamps
+6. Create controller in `/controller/` with `@RequestMapping(ApiVersion.V1 + "/resource")`
+7. Add DTOs in `/dto/` for request/response mapping (use String for ID fields)
+8. Add database schema changes in `schema.sql` (MySQL syntax)
+9. For MongoDB features, add `@Profile("mongodb")` to classes
 
 ### Adding Tests
 1. Unit tests go to `/tests/unit/`
 2. Integration tests go to `/tests/integration/`
 3. Contract tests go to `/tests/contract/`
 4. Use @SpringBootTest for integration tests
-5. Use @DataJpaTest for repository tests
+5. Use @MybatisTest (or custom test config) for mapper tests
 6. Use @WebMvcTest for controller tests
+7. Mock optional services (e.g., AI services with @Profile)
 
