@@ -1,9 +1,12 @@
 # AI驱动测试任务管理系统 - 技术方案文档
 
-**文档版本**: v1.0  
+**文档版本**: v1.1  
 **创建日期**: 2025-11-11  
+**最后更新**: 2025-11-16  
 **适用范围**: 项目组全体成员  
 **文档目的**: 帮助项目组成员快速理解系统架构、技术选型和实现方案
+
+> **重要提示 (v1.1)**: 本版本进行了重大架构调整，从JPA迁移到MyBatis，从PostgreSQL迁移到MySQL。请仔细阅读第12章"架构变更总结"。
 
 ---
 
@@ -92,8 +95,9 @@
 ┌────────────────────────────────────────────────────────────────┐
 │                   数据层 (Data Layer)                           │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐      │
-│  │PostgreSQL│  │ MongoDB  │  │  Redis   │  │  MinIO   │      │
+│  │  MySQL   │  │ MongoDB  │  │  Redis   │  │  MinIO   │      │
 │  │(业务数据)│  │(AI数据)  │  │ (缓存)   │  │ (文件)   │      │
+│  │+ MyBatis │  │@Profile  │  │ (可选)   │  │ (可选)   │      │
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘      │
 └────────────────────────────────────────────────────────────────┘
                               ↓
@@ -130,39 +134,37 @@
 
 ### 3.1 后端技术栈
 
-#### 3.1.1 Spring Boot 服务 (Java 17)
+#### 3.1.1 Spring Boot 服务 (Java 11)
 
 ```yaml
 核心框架:
-  - Spring Boot: 3.0.x
-  - Spring Cloud: 2022.0.x
-  - Spring Data JPA: 业务数据持久化
-  - Spring Data MongoDB: AI数据持久化
+  - Spring Boot: 2.7.18
+  - MyBatis: 2.3.1 (替代 Spring Data JPA)
+  - Spring Data MongoDB: AI数据持久化 (需要 @Profile("mongodb"))
 
 服务治理:
-  - Nacos: 服务发现与配置中心
-  - Spring Cloud Gateway: API网关
-  - Resilience4j: 熔断限流
-  - Spring Cloud OpenFeign: 服务间调用
+  - ~~Spring Cloud Gateway~~: (已注释 - 与 Spring MVC 不兼容)
+  - ~~Resilience4j~~: (已注释 - 版本兼容问题)
 
-消息队列:
+消息队列 (开发环境禁用):
   - Kafka: 高吞吐异步消息
   - RabbitMQ: 低延迟消息传递
 
-任务调度:
-  - Quartz: 定时任务
-  - Spring Task: 轻量级任务
-
 安全认证:
-  - Spring Security: 安全框架
+  - Spring Security: 安全框架 (SecurityFilterChain 方式)
   - JWT: Token认证
-  - OAuth2: 第三方登录
 
 数据库:
-  - PostgreSQL 13+: 主数据库
-  - MongoDB 5.0+: AI数据存储
-  - Redis 7.0+: 缓存与会话
-  - Flyway: 数据库版本管理
+  - MySQL 8.0+: 主数据库 (替代 PostgreSQL)
+  - MyBatis XML映射: SQL语句管理
+  - MongoDB 5.0+: AI数据存储 (需要 @Profile("mongodb"))
+  - Redis 7.0+: 缓存与会话 (开发环境禁用)
+
+重要说明:
+  - ID类型: String (UUID.randomUUID().toString())
+  - 手动管理时间戳: LocalDateTime.now()
+  - JSON处理: 自定义 JsonTypeHandler
+  - API版本: Controller级别使用 ApiVersion.V1
 ```
 
 **依赖管理 (pom.xml)**:
@@ -173,28 +175,41 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-web</artifactId>
     </dependency>
+    
+    <!-- MyBatis (替代 Spring Data JPA) -->
     <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-data-jpa</artifactId>
+        <groupId>org.mybatis.spring.boot</groupId>
+        <artifactId>mybatis-spring-boot-starter</artifactId>
+        <version>2.3.1</version>
     </dependency>
+    
+    <!-- MongoDB (需要 @Profile("mongodb")) -->
     <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-data-mongodb</artifactId>
     </dependency>
     
-    <!-- Database -->
+    <!-- MySQL Driver (替代 PostgreSQL) -->
     <dependency>
-        <groupId>org.postgresql</groupId>
-        <artifactId>postgresql</artifactId>
+        <groupId>com.mysql</groupId>
+        <artifactId>mysql-connector-j</artifactId>
+        <version>8.0.33</version>
+        <scope>runtime</scope>
     </dependency>
     
-    <!-- Redis -->
+    <!-- Redis (开发环境禁用) -->
     <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-data-redis</artifactId>
     </dependency>
     
-    <!-- Lombok -->
+    <!-- Spring Security -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    
+    <!-- Lombok (需配置 annotation processor) -->
     <dependency>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
@@ -206,6 +221,28 @@
         <artifactId>spring-boot-starter-validation</artifactId>
     </dependency>
 </dependencies>
+
+<!-- Compiler Plugin 配置 (Lombok支持) -->
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>3.10.1</version>
+            <configuration>
+                <source>11</source>
+                <target>11</target>
+                <annotationProcessorPaths>
+                    <path>
+                        <groupId>org.projectlombok</groupId>
+                        <artifactId>lombok</artifactId>
+                        <version>1.18.30</version>
+                    </path>
+                </annotationProcessorPaths>
+            </configuration>
+        </plugin>
+    </plugins>
+</build>
 ```
 
 #### 3.1.2 AI服务 (Python 3.9+)
@@ -344,31 +381,36 @@ HTTP客户端:
 backend/
 ├── src/main/java/com/synapsetest/testmanagement/
 │   ├── config/              # 配置类
-│   │   ├── GatewayConfig.java
+│   │   ├── GatewayConfig.java (已禁用)
+│   │   ├── JsonTypeHandler.java          # MyBatis JSON处理器
 │   │   ├── KafkaConfig.java
 │   │   ├── MonitoringConfig.java
 │   │   ├── RabbitMQConfig.java
-│   │   ├── SecurityConfig.java
+│   │   ├── SecurityConfig.java           # SecurityFilterChain方式
 │   │   └── WebConfig.java
 │   │
-│   ├── controller/          # REST控制器
-│   │   ├── HealthController.java
-│   │   ├── MonitoringController.java
-│   │   ├── ReportController.java
-│   │   ├── TestCaseController.java
-│   │   ├── TestEnvironmentController.java
-│   │   ├── TestTaskController.java
-│   │   └── TestVersionController.java
+│   ├── constants/           # 常量定义
+│   │   └── ApiVersion.java              # API版本常量 (/api/v1, /api/v2)
 │   │
-│   ├── dto/                 # 数据传输对象
+│   ├── controller/          # REST控制器
+│   │   ├── HealthController.java        # @RequestMapping("") - 无版本前缀
+│   │   ├── MonitoringController.java    # @Profile("mongodb") + ApiVersion.V1
+│   │   ├── ReportController.java        # @Profile("mongodb") + ApiVersion.V1
+│   │   ├── TestCaseController.java      # ApiVersion.V1, optional AI services
+│   │   ├── TestEnvironmentController.java  # ApiVersion.V1
+│   │   ├── TestTaskController.java      # ApiVersion.V1
+│   │   └── TestVersionController.java   # ApiVersion.V1
+│   │
+│   ├── dto/                 # 数据传输对象 (ID字段为String)
 │   │   ├── ApiResponse.java
 │   │   ├── TestTaskRequest.java
 │   │   ├── TestTaskResponse.java
 │   │   ├── TestCaseRequest.java
-│   │   └── TestCaseResponse.java
+│   │   ├── TestCaseResponse.java
+│   │   └── AITestCaseGenerationRequest.java
 │   │
-│   ├── entity/              # 基础实体
-│   │   └── BaseEntity.java
+│   ├── entity/              # 基础实体 (无JPA注解)
+│   │   └── BaseEntity.java             # String id, LocalDateTime timestamps
 │   │
 │   ├── exception/           # 异常处理
 │   │   ├── GlobalExceptionHandler.java
@@ -379,44 +421,56 @@ backend/
 │   │   ├── AuthInterceptor.java
 │   │   └── LoggingInterceptor.java
 │   │
-│   ├── model/               # 数据模型
-│   │   ├── TestTask.java            # 测试任务
-│   │   ├── TestCase.java            # 测试用例
-│   │   ├── TestEnvironment.java     # 测试环境
-│   │   ├── TestVersion.java         # 测试版本
-│   │   ├── ResourcePool.java        # 资源池
-│   │   ├── AIModel.java             # AI模型
-│   │   ├── MonitoringData.java      # 监控数据
-│   │   └── QualityReport.java       # 质量报告
+│   ├── mapper/              # MyBatis Mapper接口
+│   │   ├── TestTaskMapper.java          # @Mapper, 对应XML
+│   │   ├── TestCaseMapper.java          # @Mapper, 使用JsonTypeHandler
+│   │   ├── TestEnvironmentMapper.java   # @Mapper, 对应XML
+│   │   ├── TestVersionMapper.java       # @Mapper, 对应XML
+│   │   └── ResourcePoolMapper.java      # @Mapper, 对应XML
 │   │
-│   ├── repository/          # 数据访问层
-│   │   ├── TestTaskRepository.java
-│   │   ├── TestCaseRepository.java
-│   │   ├── MonitoringDataRepository.java
-│   │   └── QualityReportRepository.java
+│   ├── model/               # POJOs (无JPA注解)
+│   │   ├── TestTask.java            # MyBatis POJO
+│   │   ├── TestCase.java            # MyBatis POJO
+│   │   ├── TestEnvironment.java     # MyBatis POJO
+│   │   ├── TestVersion.java         # MyBatis POJO
+│   │   ├── ResourcePool.java        # MyBatis POJO
+│   │   ├── AIModel.java             # MongoDB @Document
+│   │   ├── MonitoringData.java      # MongoDB @Document
+│   │   └── QualityReport.java       # MongoDB @Document
 │   │
-│   ├── service/             # 业务逻辑层
-│   │   ├── TestTaskService.java                    # 任务管理
-│   │   ├── TestCaseService.java                    # 用例管理
-│   │   ├── TestEnvironmentService.java             # 环境管理
-│   │   ├── TestVersionService.java                 # 版本管理
-│   │   ├── ResourcePoolService.java                # 资源管理
-│   │   ├── MonitoringService.java                  # 监控服务
-│   │   ├── QualityReportService.java               # 报告服务
-│   │   ├── ReportingService.java                   # 报告生成
-│   │   ├── QualityTraceabilityService.java         # 质量追溯
+│   ├── repository/          # MongoDB仓库 (需@Profile("mongodb"))
+│   │   ├── AIModelRepository.java           # @Profile("mongodb")
+│   │   ├── MonitoringDataRepository.java    # @Profile("mongodb")
+│   │   └── QualityReportRepository.java     # @Profile("mongodb")
+│   │
+│   ├── service/             # 业务逻辑层 (手动ID/时间戳管理)
+│   │   ├── TestTaskService.java                    # 使用TestTaskMapper
+│   │   ├── TestCaseService.java                    # 使用TestCaseMapper
+│   │   ├── TestEnvironmentService.java             # 使用TestEnvironmentMapper
+│   │   ├── TestVersionService.java                 # 使用TestVersionMapper
+│   │   ├── ResourcePoolService.java                # 使用ResourcePoolMapper
+│   │   ├── MonitoringService.java                  # @Profile("mongodb")
+│   │   ├── QualityReportService.java               # @Profile("mongodb")
+│   │   ├── ReportingService.java                   # @Profile("mongodb")
+│   │   ├── QualityTraceabilityService.java         # @Profile("mongodb")
 │   │   ├── TestRecommendationService.java          # 推荐服务
-│   │   ├── AIModelService.java                     # AI模型管理
-│   │   ├── AITestCaseGenerationService.java        # AI用例生成
-│   │   └── AITestCaseOptimizationService.java      # 用例优化
+│   │   ├── AIModelService.java                     # @Profile("mongodb")
+│   │   ├── AITestCaseGenerationService.java        # @Profile("mongodb")
+│   │   └── AITestCaseOptimizationService.java      # @Profile("mongodb")
 │   │
-│   └── TestManagementApplication.java  # 应用入口
+│   └── TestManagementApplication.java  # 应用入口 (@MapperScan)
 │
 └── resources/
-    ├── application.yml           # 应用配置
+    ├── application.yml           # 应用配置 (无context-path, 自动配置排除)
     ├── application-config.yml    # 扩展配置
-    ├── schema.sql                # 数据库Schema
-    └── service-discovery.yml     # 服务发现配置
+    ├── schema.sql                # MySQL Schema (非PostgreSQL)
+    ├── service-discovery.yml     # 服务发现配置
+    └── mapper/                   # MyBatis XML映射文件
+        ├── TestTaskMapper.xml
+        ├── TestCaseMapper.xml      # 使用JsonTypeHandler
+        ├── TestEnvironmentMapper.xml
+        ├── TestVersionMapper.xml
+        └── ResourcePoolMapper.xml
 ```
 
 ### 4.2 User Story 模块映射
@@ -565,26 +619,32 @@ ai-service/
 
 ## 5. 数据模型
 
-### 5.1 PostgreSQL 数据模型
+### 5.1 MySQL 数据模型 (MyBatis)
 
 #### 5.1.1 核心业务表
 
+**数据库创建**
+```sql
+CREATE DATABASE IF NOT EXISTS test_management DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE test_management;
+```
+
 **测试任务表 (test_tasks)**
 ```sql
-CREATE TABLE test_tasks (
-    id UUID PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS test_tasks (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),  -- 字符串UUID
     name VARCHAR(100) NOT NULL,
     description TEXT,
-    environment VARCHAR(50) NOT NULL,  -- DEV/STAGING/PROD
+    environment VARCHAR(50) NOT NULL CHECK (environment IN ('DEV', 'STAGING', 'PROD')),
     version VARCHAR(50) NOT NULL,
-    test_scope VARCHAR(50),            -- SMOKE/CORE/FULL
-    status VARCHAR(20) NOT NULL,       -- PENDING/RUNNING/COMPLETED/CANCELLED
+    test_scope VARCHAR(50),
+    status VARCHAR(20) NOT NULL CHECK (status IN ('PENDING', 'RUNNING', 'COMPLETED', 'CANCELLED')),
     priority INTEGER DEFAULT 0,
     created_by VARCHAR(100) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    CONSTRAINT check_priority CHECK (priority BETWEEN 0 AND 10)
-);
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT chk_priority CHECK (priority >= 0 AND priority <= 10)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE INDEX idx_test_tasks_status ON test_tasks(status);
 CREATE INDEX idx_test_tasks_created_at ON test_tasks(created_at DESC);
@@ -592,88 +652,93 @@ CREATE INDEX idx_test_tasks_created_at ON test_tasks(created_at DESC);
 
 **测试用例表 (test_cases)**
 ```sql
-CREATE TABLE test_cases (
-    id UUID PRIMARY KEY,
-    name VARCHAR(200) NOT NULL,
+CREATE TABLE IF NOT EXISTS test_cases (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    title VARCHAR(200) NOT NULL,
     description TEXT,
-    steps TEXT NOT NULL,              -- JSON格式的测试步骤
-    expected_result TEXT,
-    priority VARCHAR(20),             -- HIGH/MEDIUM/LOW
-    status VARCHAR(20),               -- ACTIVE/INACTIVE/ARCHIVED
-    type VARCHAR(50),                 -- FUNCTIONAL/PERFORMANCE/SECURITY
-    tags TEXT[],                      -- 标签数组
-    ai_generated BOOLEAN DEFAULT FALSE,
-    ai_confidence DECIMAL(3,2),       -- AI生成的置信度 0.00-1.00
-    created_by VARCHAR(100),
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
+    steps JSON NOT NULL,              -- JSON格式的测试步骤 (使用JsonTypeHandler)
+    expected_results TEXT,
+    priority INTEGER DEFAULT 0,
+    type VARCHAR(20) NOT NULL CHECK (type IN ('FUNCTIONAL', 'PERFORMANCE', 'SECURITY')),
+    status VARCHAR(20) NOT NULL CHECK (status IN ('DRAFT', 'APPROVED', 'DEPRECATED')),
+    tags JSON,                        -- JSON数组 (使用JsonTypeHandler)
+    related_requirement VARCHAR(200),
+    created_by VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE INDEX idx_test_cases_priority ON test_cases(priority);
-CREATE INDEX idx_test_cases_ai_generated ON test_cases(ai_generated);
+CREATE INDEX idx_test_cases_type ON test_cases(type);
+CREATE INDEX idx_test_cases_status ON test_cases(status);
 ```
 
 **测试环境表 (test_environments)**
 ```sql
-CREATE TABLE test_environments (
-    id UUID PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    environment_type VARCHAR(50) NOT NULL,  -- DEV/STAGING/PROD
+CREATE TABLE IF NOT EXISTS test_environments (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
     url VARCHAR(500),
-    database_config JSONB,
-    resource_config JSONB,
-    status VARCHAR(20) DEFAULT 'ACTIVE',    -- ACTIVE/INACTIVE
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
+    config JSON,                       -- JSON配置 (使用JsonTypeHandler)
+    status VARCHAR(20) NOT NULL CHECK (status IN ('AVAILABLE', 'MAINTENANCE', 'UNAVAILABLE')),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX idx_test_environments_status ON test_environments(status);
 ```
 
 **测试版本表 (test_versions)**
 ```sql
-CREATE TABLE test_versions (
-    id UUID PRIMARY KEY,
-    version_name VARCHAR(100) NOT NULL,
-    version_number VARCHAR(50) NOT NULL,
-    baseline_version VARCHAR(50),
-    release_date DATE,
-    status VARCHAR(20) DEFAULT 'ACTIVE',
+CREATE TABLE IF NOT EXISTS test_versions (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    name VARCHAR(100) NOT NULL,
     description TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
+    product_version VARCHAR(50) NOT NULL,
+    release_date DATE,
+    config JSON,                       -- JSON配置 (使用JsonTypeHandler)
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
 **资源池表 (resource_pools)**
 ```sql
-CREATE TABLE resource_pools (
-    id UUID PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    pool_type VARCHAR(50) NOT NULL,         -- VM/CONTAINER/DEVICE
-    capacity INTEGER NOT NULL,
-    available INTEGER NOT NULL,
-    configuration JSONB,
-    status VARCHAR(20) DEFAULT 'ACTIVE',
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
+CREATE TABLE IF NOT EXISTS resource_pools (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    type VARCHAR(20) NOT NULL CHECK (type IN ('VM', 'CONTAINER', 'DEVICE')),
+    capacity INTEGER NOT NULL CHECK (capacity > 0),
+    allocated INTEGER DEFAULT 0 CHECK (allocated >= 0),
+    location VARCHAR(200),
+    config JSON,                       -- JSON配置 (使用JsonTypeHandler)
+    status VARCHAR(20) NOT NULL CHECK (status IN ('AVAILABLE', 'MAINTENANCE', 'UNAVAILABLE')),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT chk_capacity_allocated CHECK (allocated <= capacity)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX idx_resource_pools_status ON resource_pools(status);
 ```
 
-**AI模型表 (ai_models)**
+**关联表 (task_test_cases)**
 ```sql
-CREATE TABLE ai_models (
-    id UUID PRIMARY KEY,
-    model_name VARCHAR(100) NOT NULL,
-    model_type VARCHAR(50) NOT NULL,        -- LLM/CLASSIFICATION/REGRESSION
-    model_version VARCHAR(50) NOT NULL,
-    model_path VARCHAR(500),
-    configuration JSONB,
-    performance_metrics JSONB,
-    status VARCHAR(20) DEFAULT 'ACTIVE',
-    trained_at TIMESTAMP,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
+CREATE TABLE IF NOT EXISTS task_test_cases (
+    task_id CHAR(36) NOT NULL,
+    test_case_id CHAR(36) NOT NULL,
+    execution_order INTEGER,
+    PRIMARY KEY (task_id, test_case_id),
+    FOREIGN KEY (task_id) REFERENCES test_tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (test_case_id) REFERENCES test_cases(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
+
+**注意事项**:
+- **AI模型数据**: 存储在MongoDB中，而非MySQL
+- **质量报告**: 存储在MongoDB中
+- **监控数据**: 存储在MongoDB中
+- 所有需要MongoDB的功能都标记为 `@Profile("mongodb")`
 
 ### 5.2 MongoDB 数据模型
 
@@ -814,11 +879,16 @@ Value: {lockId, timestamp}
 ### 6.1 API设计原则
 
 1. **RESTful规范**: 使用标准HTTP方法 (GET/POST/PUT/DELETE)
-2. **版本控制**: 路径包含版本号 `/api/v1/`
+2. **版本控制**: 
+   - Controller级别版本控制，使用 `ApiVersion.V1` 常量
+   - 业务API: `/api/v1/*` (如 `/api/v1/test-tasks`)
+   - 系统API: 无版本前缀 (如 `/health`, `/actuator/*`)
 3. **统一响应格式**: 所有API返回统一的ApiResponse结构
 4. **错误处理**: 使用标准HTTP状态码和错误信息
-5. **分页支持**: 列表接口支持分页和排序
-6. **安全认证**: 所有API需要JWT Token认证
+5. **安全认证**: 
+   - 开发环境: `/api/v1/**` permitAll
+   - 生产环境: 需要JWT Token认证
+6. **Profile管理**: MongoDB相关API需要 `@Profile("mongodb")` 激活
 
 ### 6.2 统一响应格式
 
@@ -1382,19 +1452,21 @@ class RiskPredictionModel:
 version: '3.8'
 
 services:
-  # PostgreSQL
-  postgres:
-    image: postgres:13
+  # MySQL (替代 PostgreSQL)
+  mysql:
+    image: mysql:8.0
     environment:
-      POSTGRES_DB: test_management
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      MYSQL_DATABASE: test_management
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: testuser
+      MYSQL_PASSWORD: password
     ports:
-      - "5432:5432"
+      - "3306:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
   
-  # MongoDB
+  # MongoDB (需要激活 mongodb profile)
   mongodb:
     image: mongo:5.0
     ports:
@@ -1404,6 +1476,8 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: password
     volumes:
       - mongo_data:/data/db
+    profiles:
+      - mongodb  # 默认不启动，需要明确指定 profile
   
   # Redis
   redis:
@@ -1440,15 +1514,21 @@ services:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/test_management
-      SPRING_DATA_MONGODB_URI: mongodb://admin:password@mongodb:27017
-      SPRING_REDIS_HOST: redis
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/test_management
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      # MongoDB仅在需要时启用
+      # SPRING_DATA_MONGODB_URI: mongodb://admin:password@mongodb:27017
+      # SPRING_REDIS_HOST: redis
+      # SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
-      - postgres
-      - mongodb
-      - redis
-      - kafka
+      - mysql
+    # 可选依赖 (按需启用)
+    # depends_on:
+    #   - mysql
+    #   - mongodb
+    #   - redis
+    #   - kafka
   
   # AI Service
   ai-service:
@@ -1471,24 +1551,33 @@ services:
       - backend
 
 volumes:
-  postgres_data:
+  mysql_data:
   mongo_data:
   redis_data:
 ```
 
 **启动命令**:
 ```bash
-# 启动所有服务
+# 启动核心服务 (仅MySQL)
 docker-compose up -d
 
+# 启动所有服务 (包括MongoDB)
+docker-compose --profile mongodb up -d
+
 # 查看日志
-docker-compose logs -f
+docker-compose logs -f backend
 
 # 停止服务
 docker-compose down
 
 # 停止并删除数据
 docker-compose down -v
+
+# 仅启动数据库
+docker-compose up -d mysql
+
+# 启动应用并激活MongoDB profile
+SPRING_PROFILES_ACTIVE=mongodb docker-compose --profile mongodb up -d
 ```
 
 ### 9.2 Kubernetes生产环境
@@ -1767,21 +1856,22 @@ jobs:
 
 ### 10.1 代码规范
 
-#### 10.1.1 Java代码规范
+#### 10.1.1 Java代码规范 (MyBatis方式)
 
+**Service层示例**:
 ```java
 /**
- * 类文档注释模板
+ * 测试任务服务
  * 
- * @author 开发者姓名
- * @since 版本号
- * @see 相关类
+ * @author SynapseTest Team
+ * @since v1.1
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TestTaskService {
     
-    private final TestTaskRepository testTaskRepository;
+    private final TestTaskMapper testTaskMapper;  // MyBatis Mapper
     
     /**
      * 创建测试任务
@@ -1789,21 +1879,156 @@ public class TestTaskService {
      * @param request 任务请求对象
      * @param username 创建用户
      * @return 任务响应对象
-     * @throws ValidationException 验证失败时抛出
      */
-    @Transactional
     public TestTaskResponse createTestTask(TestTaskRequest request, String username) {
         // 参数验证
         validateRequest(request);
         
-        // 业务逻辑
-        TestTask task = buildTestTask(request, username);
-        TestTask saved = testTaskRepository.save(task);
+        // 构建实体 (手动设置ID和时间戳)
+        TestTask task = new TestTask();
+        task.setId(UUID.randomUUID().toString());  // 手动生成ID
+        task.setName(request.getName());
+        task.setDescription(request.getDescription());
+        task.setEnvironment(request.getEnvironment());
+        task.setVersion(request.getVersion());
+        task.setCreatedBy(username);
+        task.setCreatedAt(LocalDateTime.now());    // 手动设置时间戳
+        task.setUpdatedAt(LocalDateTime.now());
+        
+        // 使用MyBatis Mapper插入
+        testTaskMapper.insert(task);
         
         // 返回结果
-        return convertToResponse(saved);
+        return convertToResponse(task);
+    }
+    
+    /**
+     * 更新测试任务
+     */
+    public TestTaskResponse updateTestTask(String id, TestTaskRequest request) {
+        TestTask task = testTaskMapper.selectById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("任务不存在: " + id));
+        
+        // 更新字段
+        task.setName(request.getName());
+        task.setDescription(request.getDescription());
+        task.setUpdatedAt(LocalDateTime.now());  // 手动更新时间戳
+        
+        // 执行更新
+        testTaskMapper.update(task);
+        
+        return convertToResponse(task);
     }
 }
+```
+
+**MyBatis Mapper接口**:
+```java
+/**
+ * 测试任务Mapper接口
+ * 对应mapper/TestTaskMapper.xml
+ */
+@Mapper
+public interface TestTaskMapper {
+    
+    void insert(TestTask testTask);
+    
+    void update(TestTask testTask);
+    
+    Optional<TestTask> selectById(String id);
+    
+    List<TestTask> selectAll();
+    
+    List<TestTask> selectByStatus(@Param("status") String status);
+    
+    void deleteById(String id);
+}
+```
+
+**MyBatis XML映射文件**:
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.synapsetest.testmanagement.mapper.TestTaskMapper">
+    
+    <resultMap id="testTaskResultMap" type="com.synapsetest.testmanagement.model.TestTask">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="environment" column="environment"/>
+        <result property="version" column="version"/>
+        <result property="testScope" column="test_scope"/>
+        <result property="status" column="status"/>
+        <result property="priority" column="priority"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+    
+    <insert id="insert" parameterType="TestTask">
+        INSERT INTO test_tasks (
+            id, name, description, environment, version, 
+            test_scope, status, priority, created_by, 
+            created_at, updated_at
+        ) VALUES (
+            #{id}, #{name}, #{description}, #{environment}, #{version},
+            #{testScope}, #{status}, #{priority}, #{createdBy},
+            #{createdAt}, #{updatedAt}
+        )
+    </insert>
+    
+    <update id="update" parameterType="TestTask">
+        UPDATE test_tasks SET
+            name = #{name},
+            description = #{description},
+            environment = #{environment},
+            version = #{version},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+    
+    <select id="selectById" resultMap="testTaskResultMap">
+        SELECT * FROM test_tasks WHERE id = #{id}
+    </select>
+    
+    <select id="selectAll" resultMap="testTaskResultMap">
+        SELECT * FROM test_tasks ORDER BY created_at DESC
+    </select>
+    
+    <select id="selectByStatus" resultMap="testTaskResultMap">
+        SELECT * FROM test_tasks WHERE status = #{status}
+    </select>
+    
+    <delete id="deleteById">
+        DELETE FROM test_tasks WHERE id = #{id}
+    </delete>
+</mapper>
+```
+
+**JSON字段处理 (使用自定义TypeHandler)**:
+```java
+// Model类中JSON字段
+public class TestCase {
+    private String id;
+    private String title;
+    
+    // JSON字段，使用自定义TypeHandler
+    private List<String> steps;  // 对应MySQL的JSON类型
+    private List<String> tags;   // 对应MySQL的JSON类型
+    
+    // ... other fields
+}
+
+// MyBatis XML中指定TypeHandler
+<resultMap id="testCaseResultMap" type="TestCase">
+    <id property="id" column="id"/>
+    <result property="title" column="title"/>
+    <result property="steps" column="steps" 
+            typeHandler="com.synapsetest.testmanagement.config.JsonTypeHandler"/>
+    <result property="tags" column="tags" 
+            typeHandler="com.synapsetest.testmanagement.config.JsonTypeHandler"/>
+</resultMap>
 ```
 
 **命名规范**:
@@ -2471,6 +2696,109 @@ kubectl logs <ai-pod> -n synapsetest | grep "model loaded"
 | 版本 | 日期 | 作者 | 更新内容 |
 |------|------|------|---------|
 | v1.0 | 2025-11-11 | SynapseTest Team | 初始版本 |
+| v1.1 | 2025-11-16 | SynapseTest Team | **重大架构更新**：<br/>1. ORM从JPA/Hibernate迁移到MyBatis 2.3.1<br/>2. 数据库从PostgreSQL迁移到MySQL 8.0<br/>3. Spring Boot从3.0.x降级到2.7.18<br/>4. ID类型从UUID改为String (手动生成)<br/>5. 添加自定义JsonTypeHandler处理MySQL JSON列<br/>6. API版本控制从context-path移至Controller级别<br/>7. MongoDB功能改为可选 (需@Profile("mongodb"))<br/>8. 禁用Spring Cloud Gateway和Resilience4j<br/>9. 添加MyBatis XML映射文件支持<br/>10. SecurityConfig改为SecurityFilterChain方式 |
+
+---
+
+## 架构变更总结 (v1.1)
+
+### 🔄 重大变更
+
+#### 1. **数据库迁移: PostgreSQL → MySQL**
+- **原因**: MySQL生态更完善，社区支持更好
+- **影响**: 
+  - DDL语法调整 (UUID → CHAR(36), JSONB → JSON)
+  - 时间戳自动更新: `ON UPDATE CURRENT_TIMESTAMP`
+  - 字符集: utf8mb4
+  
+#### 2. **ORM迁移: JPA/Hibernate → MyBatis**
+- **原因**: 更好的SQL控制，更灵活的映射
+- **影响**:
+  - 移除所有JPA注解 (@Entity, @Id, @GeneratedValue等)
+  - 创建MyBatis Mapper接口 (5个)
+  - 创建MyBatis XML映射文件 (5个)
+  - 手动管理ID生成和时间戳
+  - 自定义JsonTypeHandler处理JSON字段
+
+#### 3. **Spring Boot降级: 3.0.x → 2.7.18**
+- **原因**: 兼容性和稳定性考虑
+- **影响**:
+  - Java版本从17降至11
+  - SecurityConfig使用SecurityFilterChain方式
+  - 不再使用requestMatchers (使用antMatchers)
+
+#### 4. **API版本策略变更**
+- **之前**: `server.servlet.context-path: /api/v1`
+- **现在**: Controller级别使用 `@RequestMapping(ApiVersion.V1 + "/resource")`
+- **优势**: 
+  - 支持多版本并存
+  - 系统端点无版本前缀 (/health)
+  - 更灵活的版本管理
+
+#### 5. **Profile管理策略**
+- **MongoDB功能**: 需要 `@Profile("mongodb")`
+- **开发环境**: 默认禁用Redis、Kafka、RabbitMQ、MongoDB
+- **AI功能**: 使用 `@Autowired(required = false)` + null检查
+- **优势**: 降低开发环境复杂度，按需启用功能
+
+### 📊 技术栈对比
+
+| 组件 | v1.0 | v1.1 |
+|------|------|------|
+| Spring Boot | 3.0.x | 2.7.18 |
+| Java | 17 | 11 |
+| 数据库 | PostgreSQL 13+ | MySQL 8.0+ |
+| ORM | Spring Data JPA | MyBatis 2.3.1 |
+| ID类型 | UUID | String |
+| JSON处理 | @Type(jsonb) | JsonTypeHandler |
+| API版本 | context-path | Controller级别 |
+| Gateway | Spring Cloud Gateway | ~~禁用~~ |
+| 熔断器 | Resilience4j | ~~禁用~~ |
+| Security | WebSecurityConfigurerAdapter | SecurityFilterChain |
+
+### 📝 迁移建议
+
+1. **数据库迁移**:
+   ```bash
+   # 导出PostgreSQL数据
+   pg_dump test_management > backup.sql
+   
+   # 转换为MySQL格式
+   # 手动调整UUID → CHAR(36), JSONB → JSON
+   
+   # 导入MySQL
+   mysql test_management < converted.sql
+   ```
+
+2. **代码迁移检查清单**:
+   - [ ] 移除所有JPA注解
+   - [ ] 创建MyBatis Mapper接口
+   - [ ] 创建MyBatis XML文件
+   - [ ] 更新Service类使用Mapper
+   - [ ] ID字段改为String类型
+   - [ ] 手动生成ID: `UUID.randomUUID().toString()`
+   - [ ] 手动设置时间戳: `LocalDateTime.now()`
+   - [ ] Controller使用ApiVersion常量
+   - [ ] MongoDB相关类添加@Profile
+
+3. **配置文件调整**:
+   ```yaml
+   # application.yml
+   spring:
+     datasource:
+       url: jdbc:mysql://localhost:3306/test_management  # 修改
+       driver-class-name: com.mysql.cj.jdbc.Driver        # 修改
+     autoconfigure:
+       exclude:                                             # 新增
+         - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+         - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
+   
+   mybatis:                                                # 新增
+     mapper-locations: classpath:mapper/*.xml
+     type-aliases-package: com.synapsetest.testmanagement.model
+   
+   # 移除 server.servlet.context-path: /api/v1
+   ```
 
 ---
 
