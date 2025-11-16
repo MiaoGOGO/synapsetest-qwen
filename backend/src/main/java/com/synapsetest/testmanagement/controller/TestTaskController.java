@@ -1,5 +1,6 @@
 package com.synapsetest.testmanagement.controller;
 
+import com.synapsetest.testmanagement.constants.ApiVersion;
 import com.synapsetest.testmanagement.dto.ApiResponse;
 import com.synapsetest.testmanagement.dto.TestTaskRequest;
 import com.synapsetest.testmanagement.dto.TestTaskResponse;
@@ -19,7 +20,7 @@ import java.util.List;
  * Task: T035 [US1] Implement TestTaskController
  */
 @RestController
-@RequestMapping("/api/v1/test-tasks")
+@RequestMapping(ApiVersion.V1 + "/test-tasks")
 @RequiredArgsConstructor
 public class TestTaskController {
 

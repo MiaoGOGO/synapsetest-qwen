@@ -1,5 +1,6 @@
 package com.synapsetest.testmanagement.controller;
 
+import com.synapsetest.testmanagement.constants.ApiVersion;
 import com.synapsetest.testmanagement.dto.ApiResponse;
 import com.synapsetest.testmanagement.model.TestVersion;
 import com.synapsetest.testmanagement.service.TestVersionService;
@@ -16,7 +17,7 @@ import java.util.List;
  * Task: T037 [US1] Implement TestVersionController
  */
 @RestController
-@RequestMapping("/api/v1/test-versions")
+@RequestMapping(ApiVersion.V1 + "/test-versions")
 @RequiredArgsConstructor
 public class TestVersionController {
 

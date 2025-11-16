@@ -1,5 +1,6 @@
 package com.synapsetest.testmanagement.controller;
 
+import com.synapsetest.testmanagement.constants.ApiVersion;
 import com.synapsetest.testmanagement.dto.ApiResponse;
 import com.synapsetest.testmanagement.model.TestEnvironment;
 import com.synapsetest.testmanagement.service.TestEnvironmentService;
@@ -16,7 +17,7 @@ import java.util.List;
  * Task: T036 [US1] Implement TestEnvironmentController
  */
 @RestController
-@RequestMapping("/api/v1/test-environments")
+@RequestMapping(ApiVersion.V1 + "/test-environments")
 @RequiredArgsConstructor
 public class TestEnvironmentController {
 

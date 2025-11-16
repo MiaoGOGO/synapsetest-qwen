@@ -28,8 +28,14 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             .and()
             .authorizeRequests()
-                .antMatchers("/api/v1/health", "/api/v1/actuator/**").permitAll()
-                .antMatchers("/api/v1/auth/**").permitAll()
+                // System endpoints (no version)
+                .antMatchers("/health", "/actuator/**").permitAll()
+                // Authentication endpoints
+                .antMatchers("/auth/**").permitAll()
+                // API v1 endpoints - permit all for development/testing
+                // In production, you should add proper authentication
+                .antMatchers("/api/v1/**").permitAll()
+                // All other requests require authentication
                 .anyRequest().authenticated();
         
         return http.build();

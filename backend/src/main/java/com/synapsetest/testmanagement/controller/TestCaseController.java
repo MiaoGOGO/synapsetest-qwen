@@ -1,5 +1,6 @@
 package com.synapsetest.testmanagement.controller;
 
+import com.synapsetest.testmanagement.constants.ApiVersion;
 import com.synapsetest.testmanagement.dto.*;
 import com.synapsetest.testmanagement.service.AITestCaseGenerationService;
 import com.synapsetest.testmanagement.service.AITestCaseOptimizationService;
@@ -21,7 +22,7 @@ import java.util.Map;
  * Task: T050 [US2] Implement TestCaseController
  */
 @RestController
-@RequestMapping("/api/v1/test-cases")
+@RequestMapping(ApiVersion.V1 + "/test-cases")
 public class TestCaseController {
 
     private final TestCaseService testCaseService;

@@ -1,5 +1,6 @@
 package com.synapsetest.testmanagement.controller;
 
+import com.synapsetest.testmanagement.constants.ApiVersion;
 import com.synapsetest.testmanagement.dto.ApiResponse;
 import com.synapsetest.testmanagement.model.QualityReport;
 import com.synapsetest.testmanagement.service.QualityReportService;
@@ -22,7 +23,7 @@ import java.util.Map;
  * Task: T067 [US3] Implement ReportController
  */
 @RestController
-@RequestMapping("/api/v1/reports")
+@RequestMapping(ApiVersion.V1 + "/reports")
 @RequiredArgsConstructor
 @Profile("mongodb")
 public class ReportController {

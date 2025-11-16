@@ -1,5 +1,6 @@
 package com.synapsetest.testmanagement.controller;
 
+import com.synapsetest.testmanagement.constants.ApiVersion;
 import com.synapsetest.testmanagement.dto.ApiResponse;
 import com.synapsetest.testmanagement.model.MonitoringData;
 import com.synapsetest.testmanagement.service.MonitoringService;
@@ -18,7 +19,7 @@ import java.util.Map;
  * Task: T066 [US3] Implement MonitoringController
  */
 @RestController
-@RequestMapping("/api/v1/monitoring")
+@RequestMapping(ApiVersion.V1 + "/monitoring")
 @RequiredArgsConstructor
 @Profile("mongodb")
 public class MonitoringController {

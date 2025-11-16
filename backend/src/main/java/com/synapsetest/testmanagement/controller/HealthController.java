@@ -12,7 +12,7 @@ import java.util.Map;
  * Provides health status endpoints
  */
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("")
 public class HealthController {
 
     @GetMapping("/health")
