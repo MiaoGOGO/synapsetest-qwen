@@ -2,18 +2,18 @@ package com.synapsetest.testmanagement.service;
 
 import com.synapsetest.testmanagement.exception.ResourceNotFoundException;
 import com.synapsetest.testmanagement.exception.ValidationException;
+import com.synapsetest.testmanagement.mapper.ResourcePoolMapper;
 import com.synapsetest.testmanagement.model.ResourcePool;
-import com.synapsetest.testmanagement.repository.ResourcePoolRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * ResourcePool Service
+ * ResourcePool Service (MyBatis version)
  * Business logic for resource pool management
  *
  * Task: T033 [US1] Implement ResourcePoolService
@@ -23,44 +23,49 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ResourcePoolService {
 
-    private final ResourcePoolRepository resourcePoolRepository;
+    private final ResourcePoolMapper resourcePoolMapper;
 
     /**
      * Get all available resource pools
      */
     public List<ResourcePool> getAvailableResourcePools() {
-        return resourcePoolRepository.findByStatus(ResourcePool.Status.AVAILABLE.name());
+        return resourcePoolMapper.selectByStatus(ResourcePool.ResourceStatus.AVAILABLE.name());
     }
 
     /**
      * Get resource pool by ID
      */
-    public ResourcePool getResourcePoolById(UUID id) {
-        return resourcePoolRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("ResourcePool", "id", id));
+    public ResourcePool getResourcePoolById(String id) {
+        ResourcePool pool = resourcePoolMapper.selectById(id);
+        if (pool == null) {
+            throw new ResourceNotFoundException("ResourcePool", "id", id);
+        }
+        return pool;
     }
 
     /**
      * Get resource pools by type
      */
     public List<ResourcePool> getResourcePoolsByType(String type) {
-        return resourcePoolRepository.findByType(type);
+        return resourcePoolMapper.selectByType(type);
     }
 
     /**
      * Create a new resource pool
      */
-    @Transactional
     public ResourcePool createResourcePool(ResourcePool resourcePool) {
         log.info("Creating resource pool: {}", resourcePool.getName());
-        return resourcePoolRepository.save(resourcePool);
+        resourcePool.setId(UUID.randomUUID().toString());
+        resourcePool.setCreatedAt(LocalDateTime.now());
+        resourcePool.setUpdatedAt(LocalDateTime.now());
+        resourcePoolMapper.insert(resourcePool);
+        return resourcePool;
     }
 
     /**
      * Allocate resources from pool
      */
-    @Transactional
-    public ResourcePool allocateResources(UUID poolId, int count) {
+    public ResourcePool allocateResources(String poolId, int count) {
         ResourcePool pool = getResourcePoolById(poolId);
 
         if (pool.getAvailableResources() < count) {
@@ -69,37 +74,40 @@ public class ResourcePoolService {
                             pool.getName(), pool.getAvailableResources(), count));
         }
 
-        pool.setUsed(pool.getUsed() + count);
+        pool.setAllocated(pool.getAllocated() + count);
+        pool.setUpdatedAt(LocalDateTime.now());
+        resourcePoolMapper.update(pool);
         log.info("Allocated {} resources from pool {}", count, pool.getName());
 
-        return resourcePoolRepository.save(pool);
+        return pool;
     }
 
     /**
      * Release resources back to pool
      */
-    @Transactional
-    public ResourcePool releaseResources(UUID poolId, int count) {
+    public ResourcePool releaseResources(String poolId, int count) {
         ResourcePool pool = getResourcePoolById(poolId);
 
-        if (pool.getUsed() < count) {
+        if (pool.getAllocated() < count) {
             throw new ValidationException(
-                    String.format("Cannot release %d resources from pool %s. Currently used: %d",
-                            count, pool.getName(), pool.getUsed()));
+                    String.format("Cannot release %d resources from pool %s. Currently allocated: %d",
+                            count, pool.getName(), pool.getAllocated()));
         }
 
-        pool.setUsed(pool.getUsed() - count);
+        pool.setAllocated(pool.getAllocated() - count);
+        pool.setUpdatedAt(LocalDateTime.now());
+        resourcePoolMapper.update(pool);
         log.info("Released {} resources to pool {}", count, pool.getName());
 
-        return resourcePoolRepository.save(pool);
+        return pool;
     }
 
     /**
      * Find best available resource pool for a given type
      */
     public ResourcePool findBestAvailablePool(String type, int requiredCapacity) {
-        List<ResourcePool> pools = resourcePoolRepository.findByStatusAndType(
-                ResourcePool.Status.AVAILABLE.name(), type);
+        List<ResourcePool> pools = resourcePoolMapper.selectByStatusAndType(
+                ResourcePool.ResourceStatus.AVAILABLE.name(), type);
 
         return pools.stream()
                 .filter(pool -> pool.getAvailableResources() >= requiredCapacity)

@@ -1,6 +1,7 @@
 package com.synapsetest.testmanagement.repository;
 
 import com.synapsetest.testmanagement.model.QualityReport;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,6 +13,7 @@ import java.util.Optional;
  * QualityReport Repository (MongoDB)
  */
 @Repository
+@Profile("mongodb")
 public interface QualityReportRepository extends MongoRepository<QualityReport, String> {
 
     Optional<QualityReport> findByTaskId(String taskId);

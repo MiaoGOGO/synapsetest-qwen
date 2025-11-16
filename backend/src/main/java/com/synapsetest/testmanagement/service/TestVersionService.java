@@ -1,18 +1,18 @@
 package com.synapsetest.testmanagement.service;
 
 import com.synapsetest.testmanagement.exception.ResourceNotFoundException;
+import com.synapsetest.testmanagement.mapper.TestVersionMapper;
 import com.synapsetest.testmanagement.model.TestVersion;
-import com.synapsetest.testmanagement.repository.TestVersionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * TestVersion Service
+ * TestVersion Service (MyBatis version)
  * Business logic for test version management
  *
  * Task: T032 [US1] Implement TestVersionService
@@ -22,55 +22,53 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TestVersionService {
 
-    private final TestVersionRepository versionRepository;
+    private final TestVersionMapper versionMapper;
 
     /**
      * Get all versions
      */
     public List<TestVersion> getAllVersions() {
-        return versionRepository.findAll();
+        return versionMapper.selectAll();
     }
 
     /**
      * Get version by ID
      */
-    public TestVersion getVersionById(UUID id) {
-        return versionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("TestVersion", "id", id));
+    public TestVersion getVersionById(String id) {
+        TestVersion version = versionMapper.selectById(id);
+        if (version == null) {
+            throw new ResourceNotFoundException("TestVersion", "id", id);
+        }
+        return version;
     }
 
     /**
      * Get version by name
      */
     public TestVersion getVersionByName(String name) {
-        return versionRepository.findByName(name)
-                .orElseThrow(() -> new ResourceNotFoundException("TestVersion", "name", name));
+        TestVersion version = versionMapper.selectByName(name);
+        if (version == null) {
+            throw new ResourceNotFoundException("TestVersion", "name", name);
+        }
+        return version;
     }
 
     /**
      * Get versions by product version
      */
     public List<TestVersion> getVersionsByProductVersion(String productVersion) {
-        return versionRepository.findByProductVersion(productVersion);
+        return versionMapper.selectByProductVersion(productVersion);
     }
 
     /**
      * Create a new version
      */
-    @Transactional
     public TestVersion createVersion(TestVersion version) {
         log.info("Creating test version: {}", version.getName());
-        return versionRepository.save(version);
-    }
-
-    /**
-     * Get baseline version for a product version
-     */
-    public TestVersion getBaselineVersion(String productVersion) {
-        List<TestVersion> versions = versionRepository.findByProductVersion(productVersion);
-        return versions.stream()
-                .filter(v -> v.getBaselineVersion() == null)
-                .findFirst()
-                .orElse(null);
+        version.setId(UUID.randomUUID().toString());
+        version.setCreatedAt(LocalDateTime.now());
+        version.setUpdatedAt(LocalDateTime.now());
+        versionMapper.insert(version);
+        return version;
     }
 }

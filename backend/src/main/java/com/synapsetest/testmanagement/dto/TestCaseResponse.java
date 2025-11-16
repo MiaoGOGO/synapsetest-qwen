@@ -4,15 +4,14 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 /**
- * DTO for test case response
+ * DTO for test case response (MyBatis version - using String for ID)
  */
 @Data
 public class TestCaseResponse {
 
-    private UUID id;
+    private String id;
     private String title;
     private String description;
     private List<String> steps;

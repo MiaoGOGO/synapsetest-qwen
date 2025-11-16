@@ -4,9 +4,7 @@ import com.synapsetest.testmanagement.dto.*;
 import com.synapsetest.testmanagement.service.AITestCaseGenerationService;
 import com.synapsetest.testmanagement.service.AITestCaseOptimizationService;
 import com.synapsetest.testmanagement.service.TestCaseService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,30 +12,44 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 /**
- * TestCase Controller
+ * TestCase Controller (MyBatis version)
  * REST API endpoints for test case management
+ * AI features require mongodb profile to be active
  *
  * Task: T050 [US2] Implement TestCaseController
  */
 @RestController
 @RequestMapping("/api/v1/test-cases")
-@RequiredArgsConstructor
 public class TestCaseController {
 
     private final TestCaseService testCaseService;
-    private final AITestCaseGenerationService aiGenerationService;
-    private final AITestCaseOptimizationService aiOptimizationService;
+    
+    @Autowired(required = false)
+    private AITestCaseGenerationService aiGenerationService;
+    
+    @Autowired(required = false)
+    private AITestCaseOptimizationService aiOptimizationService;
+
+    public TestCaseController(TestCaseService testCaseService) {
+        this.testCaseService = testCaseService;
+    }
 
     /**
      * AI Generate test cases
      * POST /api/v1/test-cases/generate
+     * Requires mongodb profile to be active
      */
     @PostMapping("/generate")
     public ResponseEntity<ApiResponse<Map<String, Object>>> generateTestCases(
             @Valid @RequestBody AITestCaseGenerationRequest request) {
+
+        if (aiGenerationService == null) {
+            return ResponseEntity
+                    .status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(ApiResponse.error("AI generation service is not available. Please activate mongodb profile."));
+        }
 
         List<TestCaseResponse> generatedCases = aiGenerationService.generateTestCases(request);
         Double confidenceScore = aiGenerationService.calculateConfidenceScore(request);
@@ -74,18 +86,18 @@ public class TestCaseController {
      * GET /api/v1/test-cases/{id}
      */
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<TestCaseResponse>> getTestCase(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<TestCaseResponse>> getTestCase(@PathVariable String id) {
         TestCaseResponse response = testCaseService.getTestCaseById(id);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     /**
-     * Get all test cases with pagination
+     * Get all test cases
      * GET /api/v1/test-cases
      */
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<TestCaseResponse>>> getAllTestCases(Pageable pageable) {
-        Page<TestCaseResponse> response = testCaseService.getAllTestCases(pageable);
+    public ResponseEntity<ApiResponse<List<TestCaseResponse>>> getAllTestCases() {
+        List<TestCaseResponse> response = testCaseService.getAllTestCases();
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -117,7 +129,7 @@ public class TestCaseController {
      */
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<TestCaseResponse>> updateTestCase(
-            @PathVariable UUID id,
+            @PathVariable String id,
             @Valid @RequestBody TestCaseRequest request) {
 
         TestCaseResponse response = testCaseService.updateTestCase(id, request);
@@ -129,7 +141,7 @@ public class TestCaseController {
      * POST /api/v1/test-cases/{id}/approve
      */
     @PostMapping("/{id}/approve")
-    public ResponseEntity<ApiResponse<TestCaseResponse>> approveTestCase(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<TestCaseResponse>> approveTestCase(@PathVariable String id) {
         TestCaseResponse response = testCaseService.approveTestCase(id);
         return ResponseEntity.ok(ApiResponse.success("Test case approved", response));
     }
@@ -139,7 +151,7 @@ public class TestCaseController {
      * DELETE /api/v1/test-cases/{id}
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteTestCase(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<Void>> deleteTestCase(@PathVariable String id) {
         testCaseService.deleteTestCase(id);
         return ResponseEntity.ok(ApiResponse.success("Test case deleted successfully", null));
     }
@@ -147,10 +159,17 @@ public class TestCaseController {
     /**
      * Deduplicate test cases
      * POST /api/v1/test-cases/deduplicate
+     * Requires mongodb profile to be active
      */
     @PostMapping("/deduplicate")
     public ResponseEntity<ApiResponse<Map<String, Object>>> deduplicateTestCases(
             @RequestBody List<TestCaseResponse> testCases) {
+
+        if (aiOptimizationService == null) {
+            return ResponseEntity
+                    .status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(ApiResponse.error("AI optimization service is not available. Please activate mongodb profile."));
+        }
 
         List<TestCaseResponse> optimized = aiOptimizationService.deduplicateTestCases(testCases);
 
@@ -167,10 +186,17 @@ public class TestCaseController {
     /**
      * Analyze test coverage
      * POST /api/v1/test-cases/analyze-coverage
+     * Requires mongodb profile to be active
      */
     @PostMapping("/analyze-coverage")
     public ResponseEntity<ApiResponse<Map<String, Object>>> analyzeTestCoverage(
             @RequestBody List<TestCaseResponse> testCases) {
+
+        if (aiOptimizationService == null) {
+            return ResponseEntity
+                    .status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(ApiResponse.error("AI optimization service is not available. Please activate mongodb profile."));
+        }
 
         Map<String, Object> coverage = aiOptimizationService.analyzeTestCoverage(testCases);
 

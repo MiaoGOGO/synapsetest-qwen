@@ -6,6 +6,7 @@ import com.synapsetest.testmanagement.service.QualityReportService;
 import com.synapsetest.testmanagement.service.QualityTraceabilityService;
 import com.synapsetest.testmanagement.service.ReportingService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/reports")
 @RequiredArgsConstructor
+@Profile("mongodb")
 public class ReportController {
 
     private final QualityReportService qualityReportService;

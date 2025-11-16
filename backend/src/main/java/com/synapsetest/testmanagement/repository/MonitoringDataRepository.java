@@ -1,6 +1,7 @@
 package com.synapsetest.testmanagement.repository;
 
 import com.synapsetest.testmanagement.model.MonitoringData;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,6 +13,7 @@ import java.util.Optional;
  * MonitoringData Repository (MongoDB)
  */
 @Repository
+@Profile("mongodb")
 public interface MonitoringDataRepository extends MongoRepository<MonitoringData, String> {
 
     Optional<MonitoringData> findByTaskId(String taskId);

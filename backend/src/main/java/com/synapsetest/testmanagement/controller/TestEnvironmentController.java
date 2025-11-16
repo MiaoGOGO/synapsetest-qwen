@@ -8,10 +8,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
- * TestEnvironment Controller
+ * TestEnvironment Controller (MyBatis version)
  * REST API endpoints for test environment management
  *
  * Task: T036 [US1] Implement TestEnvironmentController
@@ -38,7 +37,7 @@ public class TestEnvironmentController {
      * GET /api/v1/test-environments/{id}
      */
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<TestEnvironment>> getEnvironment(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<TestEnvironment>> getEnvironment(@PathVariable String id) {
         TestEnvironment environment = environmentService.getEnvironmentById(id);
         return ResponseEntity.ok(ApiResponse.success(environment));
     }

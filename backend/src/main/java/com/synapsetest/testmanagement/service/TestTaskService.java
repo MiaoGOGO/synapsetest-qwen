@@ -4,21 +4,19 @@ import com.synapsetest.testmanagement.dto.TestTaskRequest;
 import com.synapsetest.testmanagement.dto.TestTaskResponse;
 import com.synapsetest.testmanagement.exception.ResourceNotFoundException;
 import com.synapsetest.testmanagement.exception.ValidationException;
+import com.synapsetest.testmanagement.mapper.TestTaskMapper;
 import com.synapsetest.testmanagement.model.TestTask;
-import com.synapsetest.testmanagement.repository.TestTaskRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * TestTask Service
+ * TestTask Service (MyBatis version)
  * Business logic for test task management
  *
  * Task: T030 [US1] Implement TestTaskService
@@ -28,13 +26,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TestTaskService {
 
-    private final TestTaskRepository testTaskRepository;
+    private final TestTaskMapper testTaskMapper;
     private final TestRecommendationService recommendationService;
 
     /**
      * Create a new test task with AI recommendations
      */
-    @Transactional
     public TestTaskResponse createTestTask(TestTaskRequest request, String username) {
         log.info("Creating test task: {} by user: {}", request.getName(), username);
 
@@ -44,6 +41,7 @@ public class TestTaskService {
 
         // Create test task entity
         TestTask testTask = new TestTask();
+        testTask.setId(UUID.randomUUID().toString());
         testTask.setName(request.getName());
         testTask.setDescription(request.getDescription());
         testTask.setEnvironment(request.getEnvironment());
@@ -52,39 +50,45 @@ public class TestTaskService {
         testTask.setStatus(TestTask.Status.PENDING.name());
         testTask.setPriority(request.getPriority() != null ? request.getPriority() : 0);
         testTask.setCreatedBy(username);
+        testTask.setCreatedAt(LocalDateTime.now());
+        testTask.setUpdatedAt(LocalDateTime.now());
 
         // Save to database
-        TestTask saved = testTaskRepository.save(testTask);
+        testTaskMapper.insert(testTask);
 
-        log.info("Test task created successfully with ID: {}", saved.getId());
+        log.info("Test task created successfully with ID: {}", testTask.getId());
 
         // Convert to response DTO
-        return convertToResponse(saved, recommendation);
+        return convertToResponse(testTask, recommendation);
     }
 
     /**
      * Get test task by ID
      */
-    public TestTaskResponse getTestTaskById(UUID id) {
-        TestTask testTask = testTaskRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("TestTask", "id", id));
+    public TestTaskResponse getTestTaskById(String id) {
+        TestTask testTask = testTaskMapper.selectById(id);
+        if (testTask == null) {
+            throw new ResourceNotFoundException("TestTask", "id", id);
+        }
 
         return convertToResponse(testTask, null);
     }
 
     /**
-     * Get all test tasks with pagination
+     * Get all test tasks
      */
-    public Page<TestTaskResponse> getAllTestTasks(Pageable pageable) {
-        return testTaskRepository.findAll(pageable)
-                .map(task -> convertToResponse(task, null));
+    public List<TestTaskResponse> getAllTestTasks() {
+        return testTaskMapper.selectAll()
+                .stream()
+                .map(task -> convertToResponse(task, null))
+                .collect(Collectors.toList());
     }
 
     /**
      * Get test tasks by status
      */
     public List<TestTaskResponse> getTestTasksByStatus(String status) {
-        return testTaskRepository.findByStatus(status)
+        return testTaskMapper.selectByStatus(status)
                 .stream()
                 .map(task -> convertToResponse(task, null))
                 .collect(Collectors.toList());
@@ -93,41 +97,45 @@ public class TestTaskService {
     /**
      * Start a test task
      */
-    @Transactional
-    public TestTaskResponse startTestTask(UUID id) {
-        TestTask testTask = testTaskRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("TestTask", "id", id));
+    public TestTaskResponse startTestTask(String id) {
+        TestTask testTask = testTaskMapper.selectById(id);
+        if (testTask == null) {
+            throw new ResourceNotFoundException("TestTask", "id", id);
+        }
 
         if (!TestTask.Status.PENDING.name().equals(testTask.getStatus())) {
             throw new ValidationException("Test task must be in PENDING status to start");
         }
 
         testTask.setStatus(TestTask.Status.RUNNING.name());
-        TestTask updated = testTaskRepository.save(testTask);
+        testTask.setUpdatedAt(LocalDateTime.now());
+        testTaskMapper.update(testTask);
 
         log.info("Test task started: {}", id);
 
-        return convertToResponse(updated, null);
+        return convertToResponse(testTask, null);
     }
 
     /**
      * Cancel a test task
      */
-    @Transactional
-    public TestTaskResponse cancelTestTask(UUID id) {
-        TestTask testTask = testTaskRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("TestTask", "id", id));
+    public TestTaskResponse cancelTestTask(String id) {
+        TestTask testTask = testTaskMapper.selectById(id);
+        if (testTask == null) {
+            throw new ResourceNotFoundException("TestTask", "id", id);
+        }
 
         if (TestTask.Status.COMPLETED.name().equals(testTask.getStatus())) {
             throw new ValidationException("Cannot cancel a completed test task");
         }
 
         testTask.setStatus(TestTask.Status.CANCELLED.name());
-        TestTask updated = testTaskRepository.save(testTask);
+        testTask.setUpdatedAt(LocalDateTime.now());
+        testTaskMapper.update(testTask);
 
         log.info("Test task cancelled: {}", id);
 
-        return convertToResponse(updated, null);
+        return convertToResponse(testTask, null);
     }
 
     /**

@@ -3,15 +3,14 @@ package com.synapsetest.testmanagement.dto;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 /**
- * DTO for test task response
+ * DTO for test task response (MyBatis version - using String for ID)
  */
 @Data
 public class TestTaskResponse {
 
-    private UUID id;
+    private String id;
     private String name;
     private String description;
     private String environment;

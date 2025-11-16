@@ -5,18 +5,15 @@ import com.synapsetest.testmanagement.dto.TestTaskRequest;
 import com.synapsetest.testmanagement.dto.TestTaskResponse;
 import com.synapsetest.testmanagement.service.TestTaskService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.List;
-import java.util.UUID;
 
 /**
- * TestTask Controller
+ * TestTask Controller (MyBatis version)
  * REST API endpoints for test task management
  *
  * Task: T035 [US1] Implement TestTaskController
@@ -49,18 +46,18 @@ public class TestTaskController {
      * GET /api/v1/test-tasks/{id}
      */
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<TestTaskResponse>> getTestTask(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<TestTaskResponse>> getTestTask(@PathVariable String id) {
         TestTaskResponse response = testTaskService.getTestTaskById(id);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     /**
-     * Get all test tasks with pagination
+     * Get all test tasks
      * GET /api/v1/test-tasks
      */
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<TestTaskResponse>>> getAllTestTasks(Pageable pageable) {
-        Page<TestTaskResponse> response = testTaskService.getAllTestTasks(pageable);
+    public ResponseEntity<ApiResponse<List<TestTaskResponse>>> getAllTestTasks() {
+        List<TestTaskResponse> response = testTaskService.getAllTestTasks();
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -80,7 +77,7 @@ public class TestTaskController {
      * POST /api/v1/test-tasks/{id}/start
      */
     @PostMapping("/{id}/start")
-    public ResponseEntity<ApiResponse<TestTaskResponse>> startTestTask(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<TestTaskResponse>> startTestTask(@PathVariable String id) {
         TestTaskResponse response = testTaskService.startTestTask(id);
         return ResponseEntity.ok(ApiResponse.success("Test task started", response));
     }
@@ -90,7 +87,7 @@ public class TestTaskController {
      * POST /api/v1/test-tasks/{id}/cancel
      */
     @PostMapping("/{id}/cancel")
-    public ResponseEntity<ApiResponse<TestTaskResponse>> cancelTestTask(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<TestTaskResponse>> cancelTestTask(@PathVariable String id) {
         TestTaskResponse response = testTaskService.cancelTestTask(id);
         return ResponseEntity.ok(ApiResponse.success("Test task cancelled", response));
     }

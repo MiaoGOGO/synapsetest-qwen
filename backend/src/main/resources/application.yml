@@ -1,19 +1,16 @@
 spring:
   application:
     name: test-management-backend
+  cloud:
+    config:
+      enabled: false
+      import-check:
+        enabled: false
   datasource:
-    url: jdbc:postgresql://localhost:5432/test_management
-    username: postgres
-    password: ${DB_PASSWORD:postgres}
-    driver-class-name: org.postgresql.Driver
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
+    url: jdbc:mysql://localhost:3306/test_management?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: ${DB_PASSWORD:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     mongodb:
       uri: mongodb://localhost:27017/test_management_ai
@@ -33,9 +30,28 @@ spring:
     port: 5672
     username: guest
     password: guest
+  autoconfigure:
+    exclude:
+      # Temporarily disable non-essential services for MVP development
+      - org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration
+      - org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+      # Disable JPA/Hibernate auto-configuration (using MyBatis instead)
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
+
+# MyBatis Configuration
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.synapsetest.testmanagement.model
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
 
 server:
-  port: 8080
+  port: 8081
   servlet:
     context-path: /api/v1
 
@@ -59,15 +75,16 @@ logging:
   file:
     name: logs/application.log
 
-resilience4j:
-  circuitbreaker:
-    instances:
-      default:
-        register-health-indicator: true
-        sliding-window-size: 10
-        minimum-number-of-calls: 5
-        permitted-number-of-calls-in-half-open-state: 3
-        automatic-transition-from-open-to-half-open-enabled: true
-        wait-duration-in-open-state: 5s
-        failure-rate-threshold: 50
-        event-consumer-buffer-size: 10
+# Resilience4j configuration - temporarily disabled
+#resilience4j:
+#  circuitbreaker:
+#    instances:
+#      default:
+#        register-health-indicator: true
+#        sliding-window-size: 10
+#        minimum-number-of-calls: 5
+#        permitted-number-of-calls-in-half-open-state: 3
+#        automatic-transition-from-open-to-half-open-enabled: true
+#        wait-duration-in-open-state: 5s
+#        failure-rate-threshold: 50
+#        event-consumer-buffer-size: 10

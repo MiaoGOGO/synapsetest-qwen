@@ -12,26 +12,26 @@ import org.springframework.security.web.SecurityFilterChain;
 /**
  * Security Configuration
  * Implements authentication and authorization framework
+ * Uses SecurityFilterChain (Spring Security 5.7+ / Spring Boot 2.7+)
+ * instead of deprecated WebSecurityConfigurerAdapter
  */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf().disable()
-            .cors()
-            .and()
+            .cors().disable()
             .sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             .and()
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/v1/health", "/api/v1/actuator/**").permitAll()
-                .requestMatchers("/api/v1/auth/**").permitAll()
-                .anyRequest().authenticated()
-            );
-
+            .authorizeRequests()
+                .antMatchers("/api/v1/health", "/api/v1/actuator/**").permitAll()
+                .antMatchers("/api/v1/auth/**").permitAll()
+                .anyRequest().authenticated();
+        
         return http.build();
     }
 

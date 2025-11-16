@@ -4,6 +4,7 @@ import com.synapsetest.testmanagement.dto.ApiResponse;
 import com.synapsetest.testmanagement.model.MonitoringData;
 import com.synapsetest.testmanagement.service.MonitoringService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +20,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/monitoring")
 @RequiredArgsConstructor
+@Profile("mongodb")
 public class MonitoringController {
 
     private final MonitoringService monitoringService;
