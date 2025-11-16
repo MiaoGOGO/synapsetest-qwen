@@ -1,8 +1,8 @@
 package com.synapsetest.testmanagement.service;
 
-import com.synapsetest.testmanagement.domain.TestTask;
-import com.synapsetest.testmanagement.dto.request.TestTaskRequest;
-import com.synapsetest.testmanagement.dto.response.TestTaskResponse;
+import com.synapsetest.testmanagement.model.TestTask;
+import com.synapsetest.testmanagement.dto.TestTaskRequest;
+import com.synapsetest.testmanagement.dto.TestTaskResponse;
 import com.synapsetest.testmanagement.exception.ResourceNotFoundException;
 import com.synapsetest.testmanagement.exception.ValidationException;
 import com.synapsetest.testmanagement.mapper.TestTaskMapper;
@@ -13,8 +13,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -98,11 +96,11 @@ class TestTaskServiceTest {
     void startTask_FromPendingStatus_ShouldSucceed() {
         // Given: PENDING状态的任务
         TestTask task = createTestTask("task-001", "PENDING");
-        when(testTaskMapper.selectById("task-001")).thenReturn(Optional.of(task));
+        when(testTaskMapper.selectById("task-001")).thenReturn(task);
         when(testTaskMapper.update(any())).thenReturn(1);
 
         // When: 启动任务
-        TestTaskResponse response = testTaskService.startTask("task-001");
+        TestTaskResponse response = testTaskService.startTestTask("task-001");
 
         // Then: 状态变为RUNNING
         assertEquals("RUNNING", response.getStatus());
@@ -113,22 +111,22 @@ class TestTaskServiceTest {
     void startTask_FromCompletedStatus_ShouldThrowException() {
         // Given: COMPLETED状态的任务
         TestTask task = createTestTask("task-001", "COMPLETED");
-        when(testTaskMapper.selectById("task-001")).thenReturn(Optional.of(task));
+        when(testTaskMapper.selectById("task-001")).thenReturn(task);
 
         // When & Then: 抛出异常
         assertThrows(IllegalStateException.class,
-            () -> testTaskService.startTask("task-001"));
+            () -> testTaskService.startTestTask("task-001"));
     }
 
     @Test
     @DisplayName("场景1.6: 获取不存在的任务抛出异常")
     void getTaskById_WithNonExistingId_ShouldThrowResourceNotFoundException() {
         // Given: 不存在的ID
-        when(testTaskMapper.selectById("non-existing")).thenReturn(Optional.empty());
+        when(testTaskMapper.selectById("non-existing")).thenReturn(null);
 
         // When & Then
         assertThrows(ResourceNotFoundException.class,
-            () -> testTaskService.getTaskById("non-existing"));
+            () -> testTaskService.getTestTaskById("non-existing"));
     }
 
     // Helper methods

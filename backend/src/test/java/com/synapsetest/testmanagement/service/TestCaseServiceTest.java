@@ -1,8 +1,8 @@
 package com.synapsetest.testmanagement.service;
 
-import com.synapsetest.testmanagement.domain.TestCase;
-import com.synapsetest.testmanagement.dto.request.TestCaseRequest;
-import com.synapsetest.testmanagement.dto.response.TestCaseResponse;
+import com.synapsetest.testmanagement.model.TestCase;
+import com.synapsetest.testmanagement.dto.TestCaseRequest;
+import com.synapsetest.testmanagement.dto.TestCaseResponse;
 import com.synapsetest.testmanagement.exception.ValidationException;
 import com.synapsetest.testmanagement.mapper.TestCaseMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -14,7 +14,6 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -83,7 +82,7 @@ class TestCaseServiceTest {
     void updateTestCase_ShouldUpdateFields() {
         // Given
         TestCase existingCase = createTestCase("case-001");
-        when(testCaseMapper.selectById("case-001")).thenReturn(Optional.of(existingCase));
+        when(testCaseMapper.selectById("case-001")).thenReturn(existingCase);
         when(testCaseMapper.update(any())).thenReturn(1);
 
         TestCaseRequest updateRequest = new TestCaseRequest();
@@ -104,7 +103,7 @@ class TestCaseServiceTest {
         // Given
         TestCase draftCase = createTestCase("case-001");
         draftCase.setStatus("DRAFT");
-        when(testCaseMapper.selectById("case-001")).thenReturn(Optional.of(draftCase));
+        when(testCaseMapper.selectById("case-001")).thenReturn(draftCase);
         when(testCaseMapper.update(any())).thenReturn(1);
 
         // When
@@ -120,7 +119,7 @@ class TestCaseServiceTest {
         testCase.setId(id);
         testCase.setTitle("测试用例标题");
         testCase.setSteps(Arrays.asList("步骤1", "步骤2"));
-        testCase.setExpectedResults("预期结果");
+        testCase.setExpectedResult("预期结果");
         testCase.setType("FUNCTIONAL");
         testCase.setStatus("DRAFT");
         testCase.setPriority(5);
