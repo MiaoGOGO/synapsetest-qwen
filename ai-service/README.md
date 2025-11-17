@@ -210,12 +210,14 @@ LLM_API_BASE=https://dashscope.aliyuncs.com/compatible-mode/v1
 **算法**: XGBoost分类器 + 规则引擎
 
 **特征**:
+
 - 代码变更特征 (文件数、行数、复杂度)
 - 历史特征 (通过率、执行时间、缺陷数)
 - 业务特征 (优先级、重要性、紧急度)
 - 环境特征 (资源、负载、稳定性)
 
 **输出**:
+
 - test_scope: SMOKE, CORE, FULL
 - environment: DEV, STAGING, PROD
 - priority: 1-10
@@ -225,6 +227,7 @@ LLM_API_BASE=https://dashscope.aliyuncs.com/compatible-mode/v1
 ### 2. RAG测试用例生成
 
 **流程**:
+
 1. 解析需求文档
 2. 检索相似历史用例 (RAG)
 3. 加载企业测试标准
@@ -237,6 +240,7 @@ LLM_API_BASE=https://dashscope.aliyuncs.com/compatible-mode/v1
 **去重算法**: Sentence-BERT语义嵌入 + 余弦相似度 (阈值0.85)
 
 **优先级评分**:
+
 - 业务价值 (30%)
 - 风险等级 (25%)
 - 执行成本 (20%)
@@ -256,6 +260,7 @@ pytest --cov=. tests/
 ## 监控和日志
 
 日志输出格式:
+
 ```
 2025-11-16 10:00:00 - ai_service - INFO - Starting SynapseTest AI Service v1.0.0
 2025-11-16 10:00:01 - ai_service - INFO - LLM Provider: mock
