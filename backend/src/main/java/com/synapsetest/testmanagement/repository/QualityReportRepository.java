@@ -13,7 +13,7 @@ import java.util.Optional;
  * QualityReport Repository (MongoDB)
  */
 @Repository
-@Profile("mongodb")
+// @Profile("mongodb") // Temporarily disabled to show in Swagger UI
 public interface QualityReportRepository extends MongoRepository<QualityReport, String> {
 
     Optional<QualityReport> findByTaskId(String taskId);

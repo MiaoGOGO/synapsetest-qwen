@@ -6,8 +6,10 @@ import com.synapsetest.testmanagement.model.QualityReport;
 import com.synapsetest.testmanagement.service.QualityReportService;
 import com.synapsetest.testmanagement.service.QualityTraceabilityService;
 import com.synapsetest.testmanagement.service.ReportingService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,10 +24,11 @@ import java.util.Map;
  *
  * Task: T067 [US3] Implement ReportController
  */
+@Tag(name = "质量报告", description = "测试质量报告生成和可追溯性分析")
 @RestController
 @RequestMapping(ApiVersion.V1 + "/reports")
 @RequiredArgsConstructor
-@Profile("mongodb")
+// @Profile("mongodb") // Temporarily disabled to show in Swagger UI
 public class ReportController {
 
     private final QualityReportService qualityReportService;
@@ -36,8 +39,11 @@ public class ReportController {
      * Get quality report by ID
      * GET /api/v1/reports/{id}
      */
+    @Operation(summary = "获取质量报告", description = "根据报告ID获取详细的质量报告")
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<QualityReport>> getReport(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<QualityReport>> getReport(
+            @Parameter(description = "报告ID", required = true, example = "report-123456")
+            @PathVariable String id) {
         QualityReport report = qualityReportService.getReportById(id);
         return ResponseEntity.ok(ApiResponse.success(report));
     }
@@ -46,8 +52,11 @@ public class ReportController {
      * Get quality report by task ID
      * GET /api/v1/reports/task/{taskId}
      */
+    @Operation(summary = "根据任务获取质量报告", description = "根据测试任务ID获取对应的质量报告")
     @GetMapping("/task/{taskId}")
-    public ResponseEntity<ApiResponse<QualityReport>> getReportByTaskId(@PathVariable String taskId) {
+    public ResponseEntity<ApiResponse<QualityReport>> getReportByTaskId(
+            @Parameter(description = "任务ID", required = true, example = "task-123456")
+            @PathVariable String taskId) {
         QualityReport report = qualityReportService.getReportByTaskId(taskId);
         return ResponseEntity.ok(ApiResponse.success(report));
     }
@@ -56,6 +65,7 @@ public class ReportController {
      * Get recent reports
      * GET /api/v1/reports/recent
      */
+    @Operation(summary = "获取最近的报告", description = "获取最近生成的质量报告列表")
     @GetMapping("/recent")
     public ResponseEntity<ApiResponse<List<QualityReport>>> getRecentReports() {
         List<QualityReport> reports = qualityReportService.getRecentReports();
@@ -66,8 +76,10 @@ public class ReportController {
      * Generate comprehensive report
      * GET /api/v1/reports/comprehensive/{taskId}
      */
+    @Operation(summary = "生成综合报告", description = "生成指定任务的综合质量分析报告")
     @GetMapping("/comprehensive/{taskId}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getComprehensiveReport(
+            @Parameter(description = "任务ID", required = true, example = "task-123456")
             @PathVariable String taskId) {
         Map<String, Object> report = reportingService.generateComprehensiveReport(taskId);
         return ResponseEntity.ok(ApiResponse.success(report));
@@ -77,9 +89,12 @@ public class ReportController {
      * Generate comparison report
      * GET /api/v1/reports/compare
      */
+    @Operation(summary = "对比报告", description = "对比两个任务的测试结果和质量指标")
     @GetMapping("/compare")
     public ResponseEntity<ApiResponse<Map<String, Object>>> compareReports(
+            @Parameter(description = "任务1的ID", required = true, example = "task-111111")
             @RequestParam String taskId1,
+            @Parameter(description = "任务2的ID", required = true, example = "task-222222")
             @RequestParam String taskId2) {
         Map<String, Object> comparison = reportingService.generateComparisonReport(taskId1, taskId2);
         return ResponseEntity.ok(ApiResponse.success(comparison));
@@ -89,8 +104,11 @@ public class ReportController {
      * Generate HTML report
      * GET /api/v1/reports/html/{taskId}
      */
+    @Operation(summary = "生成HTML报告", description = "生成可视化的HTML格式质量报告")
     @GetMapping("/html/{taskId}")
-    public ResponseEntity<String> getHtmlReport(@PathVariable String taskId) {
+    public ResponseEntity<String> getHtmlReport(
+            @Parameter(description = "任务ID", required = true, example = "task-123456")
+            @PathVariable String taskId) {
         String htmlReport = reportingService.generateHtmlReport(taskId);
 
         HttpHeaders headers = new HttpHeaders();
@@ -105,8 +123,10 @@ public class ReportController {
      * Trace requirement coverage
      * GET /api/v1/reports/traceability/requirement/{requirementId}
      */
+    @Operation(summary = "需求覆盖追溯", description = "追踪指定需求的测试用例覆盖情况")
     @GetMapping("/traceability/requirement/{requirementId}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> traceRequirementCoverage(
+            @Parameter(description = "需求ID", required = true, example = "REQ-123")
             @PathVariable String requirementId) {
         Map<String, Object> traceability = traceabilityService.traceRequirementCoverage(requirementId);
         return ResponseEntity.ok(ApiResponse.success(traceability));
@@ -116,8 +136,10 @@ public class ReportController {
      * Generate traceability matrix
      * POST /api/v1/reports/traceability/matrix
      */
+    @Operation(summary = "生成追溯矩阵", description = "生成需求与测试用例的追溯关系矩阵")
     @PostMapping("/traceability/matrix")
     public ResponseEntity<ApiResponse<Map<String, Object>>> generateTraceabilityMatrix(
+            @Parameter(description = "需求ID列表", required = true)
             @RequestBody List<String> requirementIds) {
         Map<String, Object> matrix = traceabilityService.generateTraceabilityMatrix(requirementIds);
         return ResponseEntity.ok(ApiResponse.success(matrix));
@@ -127,8 +149,10 @@ public class ReportController {
      * Check release quality gates
      * GET /api/v1/reports/quality-gates/{taskId}
      */
+    @Operation(summary = "质量门禁检查", description = "检查任务是否满足发布质量门禁条件")
     @GetMapping("/quality-gates/{taskId}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> checkQualityGates(
+            @Parameter(description = "任务ID", required = true, example = "task-123456")
             @PathVariable String taskId) {
         Map<String, Object> gateCheck = traceabilityService.checkReleaseQualityGates(taskId);
         return ResponseEntity.ok(ApiResponse.success(gateCheck));
@@ -138,8 +162,10 @@ public class ReportController {
      * Trace defect impact
      * GET /api/v1/reports/traceability/defect/{defectId}
      */
+    @Operation(summary = "缺陷影响追溯", description = "追踪缺陷对相关功能和测试用例的影响")
     @GetMapping("/traceability/defect/{defectId}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> traceDefectImpact(
+            @Parameter(description = "缺陷ID", required = true, example = "BUG-123")
             @PathVariable String defectId) {
         Map<String, Object> impact = traceabilityService.traceDefectImpact(defectId);
         return ResponseEntity.ok(ApiResponse.success(impact));
@@ -149,9 +175,12 @@ public class ReportController {
      * Analyze change impact
      * POST /api/v1/reports/traceability/change-impact
      */
+    @Operation(summary = "变更影响分析", description = "分析代码变更对测试范围的影响")
     @PostMapping("/traceability/change-impact")
     public ResponseEntity<ApiResponse<Map<String, Object>>> analyzeChangeImpact(
+            @Parameter(description = "变更ID", required = true, example = "CHG-123")
             @RequestParam String changeId,
+            @Parameter(description = "变更文件列表", required = true)
             @RequestBody List<String> changedFiles) {
         Map<String, Object> analysis = traceabilityService.analyzeChangeImpact(changeId, changedFiles);
         return ResponseEntity.ok(ApiResponse.success(analysis));

@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Profile("mongodb")
+// @Profile("mongodb") // Temporarily disabled to show in Swagger UI
 public class QualityTraceabilityService {
 
     private final TestCaseService testCaseService;

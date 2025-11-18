@@ -6,6 +6,10 @@ import com.synapsetest.testmanagement.dto.response.TestCaseResponse;
 import com.synapsetest.testmanagement.service.AITestCaseGenerationService;
 import com.synapsetest.testmanagement.service.AITestCaseOptimizationService;
 import com.synapsetest.testmanagement.service.TestCaseService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +26,7 @@ import java.util.Map;
  *
  * Task: T050 [US2] Implement TestCaseController
  */
+@Tag(name = "测试用例管理", description = "测试用例的管理及AI生成功能")
 @RestController
 @RequestMapping(ApiVersion.V1 + "/test-cases")
 public class TestCaseController {
@@ -43,8 +48,23 @@ public class TestCaseController {
      * POST /api/v1/test-cases/generate
      * Requires mongodb profile to be active
      */
+    @Operation(
+            summary = "AI生成测试用例",
+            description = "基于需求文本AI生成测试用例，支持去重和优先级排序"
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "生成成功"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "503",
+                    description = "AI服务不可用"
+            )
+    })
     @PostMapping("/generate")
     public ResponseEntity<ApiResponse<Map<String, Object>>> generateTestCases(
+            @Parameter(description = "AI测试用例生成请求", required = true)
             @Valid @RequestBody AITestCaseGenerationRequest request) {
 
         if (aiGenerationService == null) {
@@ -71,9 +91,19 @@ public class TestCaseController {
      * Create a new test case
      * POST /api/v1/test-cases
      */
+    @Operation(
+            summary = "创建测试用例",
+            description = "手动创建一个新的测试用例"
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "201",
+            description = "创建成功"
+    )
     @PostMapping
     public ResponseEntity<ApiResponse<TestCaseResponse>> createTestCase(
+            @Parameter(description = "测试用例创建请求", required = true)
             @Valid @RequestBody TestCaseRequest request,
+            @Parameter(description = "用户名", required = false, example = "zhangsan")
             @RequestHeader(value = "X-User-Name", defaultValue = "system") String username) {
 
         TestCaseResponse response = testCaseService.createTestCase(request, username);
@@ -87,8 +117,11 @@ public class TestCaseController {
      * Get test case by ID
      * GET /api/v1/test-cases/{id}
      */
+    @Operation(summary = "获取测试用例详情", description = "根据ID获取测试用例的详细信息")
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<TestCaseResponse>> getTestCase(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<TestCaseResponse>> getTestCase(
+            @Parameter(description = "测试用例ID", required = true, example = "tc-123456")
+            @PathVariable String id) {
         TestCaseResponse response = testCaseService.getTestCaseById(id);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -97,6 +130,7 @@ public class TestCaseController {
      * Get all test cases
      * GET /api/v1/test-cases
      */
+    @Operation(summary = "获取所有测试用例", description = "获取系统中所有的测试用例列表")
     @GetMapping
     public ResponseEntity<ApiResponse<List<TestCaseResponse>>> getAllTestCases() {
         List<TestCaseResponse> response = testCaseService.getAllTestCases();
@@ -107,8 +141,10 @@ public class TestCaseController {
      * Get test cases by status
      * GET /api/v1/test-cases?status=DRAFT
      */
+    @Operation(summary = "按状态查询测试用例", description = "根据状态筛选测试用例")
     @GetMapping(params = "status")
     public ResponseEntity<ApiResponse<List<TestCaseResponse>>> getTestCasesByStatus(
+            @Parameter(description = "状态", required = true, example = "DRAFT")
             @RequestParam String status) {
         List<TestCaseResponse> response = testCaseService.getTestCasesByStatus(status);
         return ResponseEntity.ok(ApiResponse.success(response));
@@ -118,8 +154,10 @@ public class TestCaseController {
      * Get test cases by type
      * GET /api/v1/test-cases?type=FUNCTIONAL
      */
+    @Operation(summary = "按类型查询测试用例", description = "根据类型筛选测试用例")
     @GetMapping(params = "type")
     public ResponseEntity<ApiResponse<List<TestCaseResponse>>> getTestCasesByType(
+            @Parameter(description = "类型", required = true, example = "FUNCTIONAL")
             @RequestParam String type) {
         List<TestCaseResponse> response = testCaseService.getTestCasesByType(type);
         return ResponseEntity.ok(ApiResponse.success(response));
@@ -129,9 +167,12 @@ public class TestCaseController {
      * Update test case
      * PUT /api/v1/test-cases/{id}
      */
+    @Operation(summary = "更新测试用例", description = "更新指定ID的测试用例信息")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<TestCaseResponse>> updateTestCase(
+            @Parameter(description = "测试用例ID", required = true, example = "tc-123456")
             @PathVariable String id,
+            @Parameter(description = "更新请求", required = true)
             @Valid @RequestBody TestCaseRequest request) {
 
         TestCaseResponse response = testCaseService.updateTestCase(id, request);

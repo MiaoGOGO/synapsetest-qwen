@@ -30,6 +30,8 @@ public class SecurityConfig {
             .authorizeRequests()
                 // System endpoints (no version)
                 .antMatchers("/health", "/actuator/**").permitAll()
+                // Swagger/OpenAPI endpoints
+                .antMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**").permitAll()
                 // Authentication endpoints
                 .antMatchers("/auth/**").permitAll()
                 // API v1 endpoints - permit all for development/testing

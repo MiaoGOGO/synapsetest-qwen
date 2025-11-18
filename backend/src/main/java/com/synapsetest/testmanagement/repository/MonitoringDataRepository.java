@@ -13,7 +13,7 @@ import java.util.Optional;
  * MonitoringData Repository (MongoDB)
  */
 @Repository
-@Profile("mongodb")
+// @Profile("mongodb") // Temporarily disabled to show in Swagger UI
 public interface MonitoringDataRepository extends MongoRepository<MonitoringData, String> {
 
     Optional<MonitoringData> findByTaskId(String taskId);

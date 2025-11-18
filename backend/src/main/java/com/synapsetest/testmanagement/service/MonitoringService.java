@@ -22,7 +22,7 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Profile("mongodb")
+// @Profile("mongodb") // Temporarily disabled to show in Swagger UI
 public class MonitoringService {
 
     private final MonitoringDataRepository monitoringDataRepository;

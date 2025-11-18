@@ -5,6 +5,13 @@ import com.synapsetest.testmanagement.dto.ApiResponse;
 import com.synapsetest.testmanagement.dto.TestTaskRequest;
 import com.synapsetest.testmanagement.dto.response.TestTaskResponse;
 import com.synapsetest.testmanagement.service.TestTaskService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +26,7 @@ import java.util.List;
  *
  * Task: T035 [US1] Implement TestTaskController
  */
+@Tag(name = "测试任务管理", description = "测试任务的创建、执行、状态管理等功能")
 @RestController
 @RequestMapping(ApiVersion.V1 + "/test-tasks")
 @RequiredArgsConstructor
@@ -30,9 +38,39 @@ public class TestTaskController {
      * Create a new test task
      * POST /api/v1/test-tasks
      */
+    @Operation(
+            summary = "创建测试任务",
+            description = "创建一个新的测试任务，基于代码变更信息和测试配置生成测试计划"
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "201",
+                    description = "测试任务创建成功",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(value = "{\n" +
+                                    "  \"success\": true,\n" +
+                                    "  \"message\": \"Test task created successfully\",\n" +
+                                    "  \"data\": {\n" +
+                                    "    \"taskId\": \"task-123456\",\n" +
+                                    "    \"taskName\": \"冒烟测试-订单模块\",\n" +
+                                    "    \"status\": \"PENDING\",\n" +
+                                    "    \"createdAt\": \"2025-11-18T10:30:00\"\n" +
+                                    "  }\n" +
+                                    "}")
+                    )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "请求参数错误"
+            )
+    })
     @PostMapping
     public ResponseEntity<ApiResponse<TestTaskResponse>> createTestTask(
+            @Parameter(description = "测试任务创建请求", required = true)
             @Valid @RequestBody TestTaskRequest request,
+            @Parameter(description = "用户名", required = false, example = "zhangsan")
             @RequestHeader(value = "X-User-Name", defaultValue = "system") String username) {
 
         TestTaskResponse response = testTaskService.createTestTask(request, username);
@@ -46,8 +84,24 @@ public class TestTaskController {
      * Get test task by ID
      * GET /api/v1/test-tasks/{id}
      */
+    @Operation(
+            summary = "获取测试任务详情",
+            description = "根据任务ID获取测试任务的详细信息"
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "获取成功"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "任务不存在"
+            )
+    })
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<TestTaskResponse>> getTestTask(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<TestTaskResponse>> getTestTask(
+            @Parameter(description = "任务ID", required = true, example = "task-123456")
+            @PathVariable String id) {
         TestTaskResponse response = testTaskService.getTestTaskById(id);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -56,6 +110,14 @@ public class TestTaskController {
      * Get all test tasks
      * GET /api/v1/test-tasks
      */
+    @Operation(
+            summary = "获取所有测试任务",
+            description = "获取系统中所有的测试任务列表"
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "获取成功"
+    )
     @GetMapping
     public ResponseEntity<ApiResponse<List<TestTaskResponse>>> getAllTestTasks() {
         List<TestTaskResponse> response = testTaskService.getAllTestTasks();
@@ -66,8 +128,17 @@ public class TestTaskController {
      * Get test tasks by status
      * GET /api/v1/test-tasks?status=PENDING
      */
+    @Operation(
+            summary = "按状态查询测试任务",
+            description = "根据任务状态筛选测试任务列表"
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "查询成功"
+    )
     @GetMapping(params = "status")
     public ResponseEntity<ApiResponse<List<TestTaskResponse>>> getTestTasksByStatus(
+            @Parameter(description = "任务状态", required = true, example = "PENDING")
             @RequestParam String status) {
         List<TestTaskResponse> response = testTaskService.getTestTasksByStatus(status);
         return ResponseEntity.ok(ApiResponse.success(response));
@@ -77,8 +148,28 @@ public class TestTaskController {
      * Start a test task
      * POST /api/v1/test-tasks/{id}/start
      */
+    @Operation(
+            summary = "启动测试任务",
+            description = "启动指定ID的测试任务，开始执行测试"
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "任务启动成功"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "任务不存在"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "任务状态不允许启动"
+            )
+    })
     @PostMapping("/{id}/start")
-    public ResponseEntity<ApiResponse<TestTaskResponse>> startTestTask(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<TestTaskResponse>> startTestTask(
+            @Parameter(description = "任务ID", required = true, example = "task-123456")
+            @PathVariable String id) {
         TestTaskResponse response = testTaskService.startTestTask(id);
         return ResponseEntity.ok(ApiResponse.success("Test task started", response));
     }
@@ -87,8 +178,28 @@ public class TestTaskController {
      * Cancel a test task
      * POST /api/v1/test-tasks/{id}/cancel
      */
+    @Operation(
+            summary = "取消测试任务",
+            description = "取消指定ID的测试任务"
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "任务取消成功"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "任务不存在"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "任务状态不允许取消"
+            )
+    })
     @PostMapping("/{id}/cancel")
-    public ResponseEntity<ApiResponse<TestTaskResponse>> cancelTestTask(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<TestTaskResponse>> cancelTestTask(
+            @Parameter(description = "任务ID", required = true, example = "task-123456")
+            @PathVariable String id) {
         TestTaskResponse response = testTaskService.cancelTestTask(id);
         return ResponseEntity.ok(ApiResponse.success("Test task cancelled", response));
     }
