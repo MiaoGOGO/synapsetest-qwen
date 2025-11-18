@@ -1,7 +1,6 @@
 package com.synapsetest.testmanagement.controller;
 
 import com.synapsetest.testmanagement.dto.response.DashboardStatsResponse;
-import com.synapsetest.testmanagement.dto.response.MonitoringDataResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

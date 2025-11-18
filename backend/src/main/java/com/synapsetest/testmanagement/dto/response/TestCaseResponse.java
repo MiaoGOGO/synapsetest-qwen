@@ -1,4 +1,4 @@
-package com.synapsetest.testmanagement.dto;
+package com.synapsetest.testmanagement.dto.response;
 
 import lombok.Data;
 
@@ -13,10 +13,11 @@ public class TestCaseResponse {
 
     private String id;
     private String title;
+    private String caseName;  // Alias for title, used in some API responses
     private String description;
     private List<String> steps;
     private String expectedResults;
-    private Integer priority;
+    private Integer priority;  // Priority level (0-10)
     private String type;
     private String status;
     private List<String> tags;
@@ -25,3 +26,4 @@ public class TestCaseResponse {
     private LocalDateTime updatedAt;
     private String createdBy;
 }
+

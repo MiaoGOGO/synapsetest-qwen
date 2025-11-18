@@ -1,21 +1,25 @@
 package com.synapsetest.testmanagement.mapper;
 
-import com.synapsetest.testmanagement.entity.MonitoringData;
+import com.synapsetest.testmanagement.model.MonitoringData;
+import com.synapsetest.testmanagement.repository.MonitoringDataRepository;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.test.context.jdbc.Sql;
+import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Mapper层单元测试 - MonitoringDataMapper
+ * Repository层单元测试 - MonitoringData (MongoDB)
  *
  * 测试目标：
  * 1. 验证监控数据的写入和查询
@@ -27,234 +31,272 @@ import static org.junit.jupiter.api.Assertions.*;
  * - 时间序列数据的存储
  * - 按时间范围的高效查询
  * - 统计聚合（成功率、平均执行时间等）
+ *
+ * Note: This test uses MongoDB for time-series data storage
  */
-@MybatisTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@DisplayName("MonitoringDataMapper数据访问层测试")
+@DataMongoTest
+@ActiveProfiles("mongodb")
+@DisplayName("MonitoringData Repository测试")
 public class MonitoringDataMapperTest {
 
     @Autowired
-    private MonitoringDataMapper monitoringDataMapper;
+    private MonitoringDataRepository monitoringDataRepository;
+
+    @BeforeEach
+    void setUp() {
+        // 清理测试数据
+        monitoringDataRepository.deleteAll();
+    }
+
+    @AfterEach
+    void tearDown() {
+        // 清理测试数据
+        monitoringDataRepository.deleteAll();
+    }
 
     @Test
-    @DisplayName("Mapper测试1: 插入监控数据")
-    @Sql(scripts = "/test-data-mapper.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    @DisplayName("Repository测试1: 插入监控数据")
     void insert_WithValidMonitoringData_ShouldPersist() {
         // Given: 准备监控数据
         MonitoringData data = new MonitoringData();
-        data.setTaskId(1L);
-        data.setMetricType("EXECUTION_TIME");
-        data.setMetricValue(125.5);
-        data.setUnit("seconds");
-        data.setRecordedAt(LocalDateTime.now());
-        data.setCreatedAt(LocalDateTime.now());
+        data.setTaskId("task-001");
+        data.setStatus("RUNNING");
+        data.setProgress(50);
+        data.setExecutedCases(50);
+        data.setTotalCases(100);
+        data.setPassedCases(45);
+        data.setFailedCases(5);
+        data.setSkippedCases(0);
+        data.setStartTime(LocalDateTime.now());
+        data.setTimestamp(LocalDateTime.now());
+        data.setEnvironment("DEV");
+        data.setVersion("v1.0.0");
 
         // When: 执行插入
-        int affectedRows = monitoringDataMapper.insert(data);
+        MonitoringData saved = monitoringDataRepository.save(data);
 
         // Then: 验证插入成功
-        assertEquals(1, affectedRows);
-        assertNotNull(data.getId());
+        assertNotNull(saved.getId());
+        assertEquals("task-001", saved.getTaskId());
+        assertEquals("RUNNING", saved.getStatus());
+        assertEquals(50, saved.getProgress());
 
-        MonitoringData inserted = monitoringDataMapper.selectById(data.getId());
-        assertNotNull(inserted);
-        assertEquals(125.5, inserted.getMetricValue());
+        // 验证可以查询到
+        Optional<MonitoringData> found = monitoringDataRepository.findById(saved.getId());
+        assertTrue(found.isPresent());
+        assertEquals("task-001", found.get().getTaskId());
     }
 
     @Test
-    @DisplayName("Mapper测试2: 根据任务ID查询监控数据")
-    @Sql(scripts = "/test-data-mapper.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    void selectByTaskId_WithValidTaskId_ShouldReturnList() {
-        // Given: 任务ID
-        Long taskId = 1L;
+    @DisplayName("Repository测试2: 根据任务ID查询监控数据")
+    void findByTaskId_WithValidTaskId_ShouldReturnData() {
+        // Given: 插入测试数据
+        MonitoringData data = createMonitoringData("task-001", "RUNNING", 50);
+        monitoringDataRepository.save(data);
 
         // When: 根据任务ID查询
-        List<MonitoringData> dataList = monitoringDataMapper.selectByTaskId(taskId);
+        Optional<MonitoringData> found = monitoringDataRepository.findByTaskId("task-001");
 
         // Then: 验证查询结果
-        assertNotNull(dataList);
-        assertTrue(dataList.size() > 0);
-        dataList.forEach(data -> assertEquals(taskId, data.getTaskId()));
+        assertTrue(found.isPresent());
+        assertEquals("task-001", found.get().getTaskId());
+        assertEquals("RUNNING", found.get().getStatus());
     }
 
     @Test
-    @DisplayName("Mapper测试3: 根据时间范围查询监控数据")
-    @Sql(scripts = "/test-data-mapper.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    void selectByTimeRange_WithValidRange_ShouldReturnFilteredData() {
-        // Given: 时间范围
-        LocalDateTime startTime = LocalDateTime.now().minusHours(24);
-        LocalDateTime endTime = LocalDateTime.now();
+    @DisplayName("Repository测试3: 根据状态查询监控数据")
+    void findByStatus_WithValidStatus_ShouldReturnList() {
+        // Given: 插入多条不同状态的数据
+        monitoringDataRepository.save(createMonitoringData("task-001", "RUNNING", 50));
+        monitoringDataRepository.save(createMonitoringData("task-002", "RUNNING", 60));
+        monitoringDataRepository.save(createMonitoringData("task-003", "COMPLETED", 100));
 
-        // When: 根据时间范围查询
-        List<MonitoringData> dataList = monitoringDataMapper.selectByTimeRange(startTime, endTime);
+        // When: 根据状态查询
+        List<MonitoringData> runningTasks = monitoringDataRepository.findByStatus("RUNNING");
 
         // Then: 验证查询结果
-        assertNotNull(dataList);
-        dataList.forEach(data -> {
-            assertTrue(data.getRecordedAt().isAfter(startTime) || data.getRecordedAt().isEqual(startTime));
-            assertTrue(data.getRecordedAt().isBefore(endTime) || data.getRecordedAt().isEqual(endTime));
+        assertNotNull(runningTasks);
+        assertEquals(2, runningTasks.size());
+        runningTasks.forEach(task -> assertEquals("RUNNING", task.getStatus()));
+    }
+
+    @Test
+    @DisplayName("Repository测试4: 根据时间范围查询监控数据")
+    void findByTimestampBetween_WithValidRange_ShouldReturnFilteredData() {
+        // Given: 插入不同时间的数据
+        LocalDateTime now = LocalDateTime.now();
+        
+        MonitoringData data1 = createMonitoringData("task-001", "RUNNING", 50);
+        data1.setTimestamp(now.minusHours(2));
+        monitoringDataRepository.save(data1);
+
+        MonitoringData data2 = createMonitoringData("task-002", "RUNNING", 60);
+        data2.setTimestamp(now.minusHours(1));
+        monitoringDataRepository.save(data2);
+
+        MonitoringData data3 = createMonitoringData("task-003", "COMPLETED", 100);
+        data3.setTimestamp(now.minusHours(5));
+        monitoringDataRepository.save(data3);
+
+        // When: 查询最近3小时的数据
+        LocalDateTime startTime = now.minusHours(3);
+        LocalDateTime endTime = now;
+        List<MonitoringData> recentData = monitoringDataRepository.findByTimestampBetween(startTime, endTime);
+
+        // Then: 验证查询结果
+        assertNotNull(recentData);
+        assertEquals(2, recentData.size());
+        recentData.forEach(data -> {
+            assertTrue(data.getTimestamp().isAfter(startTime) || data.getTimestamp().isEqual(startTime));
+            assertTrue(data.getTimestamp().isBefore(endTime) || data.getTimestamp().isEqual(endTime));
         });
     }
 
     @Test
-    @DisplayName("Mapper测试4: 根据指标类型查询数据")
-    @Sql(scripts = "/test-data-mapper.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    void selectByMetricType_WithValidType_ShouldReturnList() {
-        // Given: 指标类型
-        String metricType = "PASS_RATE";
+    @DisplayName("Repository测试5: 根据环境查询监控数据")
+    void findByEnvironment_WithValidEnvironment_ShouldReturnList() {
+        // Given: 插入不同环境的数据
+        MonitoringData devData = createMonitoringData("task-001", "RUNNING", 50);
+        devData.setEnvironment("DEV");
+        monitoringDataRepository.save(devData);
 
-        // When: 根据指标类型查询
-        List<MonitoringData> dataList = monitoringDataMapper.selectByMetricType(metricType);
+        MonitoringData testData = createMonitoringData("task-002", "RUNNING", 60);
+        testData.setEnvironment("TEST");
+        monitoringDataRepository.save(testData);
+
+        // When: 查询DEV环境的数据
+        List<MonitoringData> devMonitoring = monitoringDataRepository.findByEnvironment("DEV");
 
         // Then: 验证查询结果
-        assertNotNull(dataList);
-        assertTrue(dataList.size() > 0);
-        dataList.forEach(data -> assertEquals(metricType, data.getMetricType()));
+        assertNotNull(devMonitoring);
+        assertEquals(1, devMonitoring.size());
+        assertEquals("DEV", devMonitoring.get(0).getEnvironment());
     }
 
     @Test
-    @DisplayName("Mapper测试5: 统计任务的平均执行时间")
-    @Sql(scripts = "/test-data-mapper.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    void calculateAverageExecutionTime_ShouldReturnCorrectValue() {
-        // Given: 任务ID和指标类型
-        Long taskId = 1L;
-        String metricType = "EXECUTION_TIME";
+    @DisplayName("Repository测试6: 查询最近20条监控数据")
+    void findTop20ByOrderByTimestampDesc_ShouldReturnRecentData() {
+        // Given: 插入30条数据
+        LocalDateTime now = LocalDateTime.now();
+        for (int i = 0; i < 30; i++) {
+            MonitoringData data = createMonitoringData("task-" + i, "RUNNING", 50);
+            data.setTimestamp(now.minusMinutes(i));
+            monitoringDataRepository.save(data);
+        }
 
-        // When: 计算平均值
-        Double avgTime = monitoringDataMapper.calculateAverage(taskId, metricType);
+        // When: 查询最近20条
+        List<MonitoringData> recentData = monitoringDataRepository.findTop20ByOrderByTimestampDesc();
 
-        // Then: 验证统计结果
-        assertNotNull(avgTime);
-        assertTrue(avgTime > 0);
+        // Then: 验证查询结果
+        assertNotNull(recentData);
+        assertTrue(recentData.size() <= 20);
+        
+        // 验证按时间倒序排列
+        for (int i = 0; i < recentData.size() - 1; i++) {
+            assertTrue(recentData.get(i).getTimestamp().isAfter(recentData.get(i + 1).getTimestamp()) ||
+                      recentData.get(i).getTimestamp().isEqual(recentData.get(i + 1).getTimestamp()));
+        }
     }
 
     @Test
-    @DisplayName("Mapper测试6: 统计任务的测试通过率")
-    @Sql(scripts = "/test-data-mapper.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    @DisplayName("Repository测试7: 更新监控数据")
+    void update_WithValidData_ShouldUpdateSuccessfully() {
+        // Given: 插入初始数据
+        MonitoringData data = createMonitoringData("task-001", "RUNNING", 50);
+        MonitoringData saved = monitoringDataRepository.save(data);
+
+        // When: 更新进度
+        saved.setProgress(80);
+        saved.setExecutedCases(80);
+        saved.setPassedCases(75);
+        MonitoringData updated = monitoringDataRepository.save(saved);
+
+        // Then: 验证更新成功
+        assertEquals(80, updated.getProgress());
+        assertEquals(80, updated.getExecutedCases());
+        assertEquals(75, updated.getPassedCases());
+    }
+
+    @Test
+    @DisplayName("Repository测试8: 删除监控数据")
+    void delete_WithValidId_ShouldDeleteSuccessfully() {
+        // Given: 插入测试数据
+        MonitoringData data = createMonitoringData("task-001", "COMPLETED", 100);
+        MonitoringData saved = monitoringDataRepository.save(data);
+        String id = saved.getId();
+
+        // When: 删除数据
+        monitoringDataRepository.deleteById(id);
+
+        // Then: 验证删除成功
+        Optional<MonitoringData> deleted = monitoringDataRepository.findById(id);
+        assertFalse(deleted.isPresent());
+    }
+
+    @Test
+    @DisplayName("Repository测试9: 测试通过率计算")
     void calculatePassRate_ShouldReturnCorrectPercentage() {
-        // Given: 任务ID
-        Long taskId = 1L;
+        // Given: 创建包含用例执行数据的监控数据
+        MonitoringData data = new MonitoringData();
+        data.setTaskId("task-001");
+        data.setExecutedCases(100);
+        data.setPassedCases(85);
+        data.setFailedCases(15);
 
-        // When: 查询通过率数据
-        List<MonitoringData> passRateData = monitoringDataMapper.selectByTaskIdAndMetricType(taskId, "PASS_RATE");
+        // When: 计算通过率
+        Double passRate = data.getPassRate();
 
-        // Then: 验证查询结果
-        assertNotNull(passRateData);
-        if (!passRateData.isEmpty()) {
-            passRateData.forEach(data -> {
-                assertTrue(data.getMetricValue() >= 0 && data.getMetricValue() <= 100);
-            });
-        }
+        // Then: 验证计算结果
+        assertNotNull(passRate);
+        assertEquals(85.0, passRate, 0.01);
     }
 
     @Test
-    @DisplayName("Mapper测试7: 批量插入监控数据")
-    @Sql(scripts = "/test-data-mapper.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    void batchInsert_WithMultipleRecords_ShouldInsertAll() {
-        // Given: 准备批量监控数据
-        List<MonitoringData> dataList = List.of(
-            createMonitoringData(1L, "CPU_USAGE", 45.2),
-            createMonitoringData(1L, "MEMORY_USAGE", 68.5),
-            createMonitoringData(1L, "DISK_USAGE", 32.1)
-        );
+    @DisplayName("Repository测试10: 存储复杂的资源使用和性能指标数据")
+    void save_WithComplexMetrics_ShouldPersistCorrectly() {
+        // Given: 准备包含复杂指标的监控数据
+        MonitoringData data = createMonitoringData("task-001", "RUNNING", 50);
+        
+        Map<String, Object> resourceUsage = new HashMap<>();
+        resourceUsage.put("cpu_usage", 75.5);
+        resourceUsage.put("memory_mb", 2048);
+        resourceUsage.put("disk_io", "120MB/s");
+        data.setResourceUsage(resourceUsage);
 
-        // When: 批量插入
-        int affectedRows = monitoringDataMapper.batchInsert(dataList);
+        Map<String, Object> performanceMetrics = new HashMap<>();
+        performanceMetrics.put("avg_response_time_ms", 150);
+        performanceMetrics.put("throughput_rps", 1000);
+        performanceMetrics.put("error_rate", 0.05);
+        data.setPerformanceMetrics(performanceMetrics);
 
-        // Then: 验证插入成功
-        assertEquals(3, affectedRows);
-        dataList.forEach(data -> assertNotNull(data.getId()));
-    }
+        // When: 保存数据
+        MonitoringData saved = monitoringDataRepository.save(data);
 
-    @Test
-    @DisplayName("Mapper测试8: 查询最近N条监控数据")
-    @Sql(scripts = "/test-data-mapper.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    void selectRecentData_WithLimit_ShouldReturnLimitedRecords() {
-        // Given: 任务ID和查询数量
-        Long taskId = 1L;
-        int limit = 10;
-
-        // When: 查询最近的监控数据
-        List<MonitoringData> dataList = monitoringDataMapper.selectRecentByTaskId(taskId, limit);
-
-        // Then: 验证查询结果
-        assertNotNull(dataList);
-        assertTrue(dataList.size() <= limit);
-
-        // 验证数据按时间倒序排列
-        if (dataList.size() > 1) {
-            for (int i = 0; i < dataList.size() - 1; i++) {
-                assertTrue(dataList.get(i).getRecordedAt().isAfter(dataList.get(i + 1).getRecordedAt()) ||
-                          dataList.get(i).getRecordedAt().isEqual(dataList.get(i + 1).getRecordedAt()));
-            }
-        }
-    }
-
-    @Test
-    @DisplayName("Mapper测试9: 删除过期监控数据")
-    @Sql(scripts = "/test-data-mapper.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    void deleteOldData_WithCutoffDate_ShouldRemoveExpiredRecords() {
-        // Given: 删除30天前的数据
-        LocalDateTime cutoffDate = LocalDateTime.now().minusDays(30);
-
-        // When: 删除过期数据
-        int deletedCount = monitoringDataMapper.deleteBeforeDate(cutoffDate);
-
-        // Then: 验证删除操作
-        assertTrue(deletedCount >= 0);
-
-        // 验证剩余数据都在截止日期之后
-        List<MonitoringData> remainingData = monitoringDataMapper.selectByTimeRange(
-            cutoffDate.minusDays(365),
-            LocalDateTime.now()
-        );
-        remainingData.forEach(data ->
-            assertTrue(data.getRecordedAt().isAfter(cutoffDate) || data.getRecordedAt().isEqual(cutoffDate))
-        );
-    }
-
-    @Test
-    @DisplayName("Mapper测试10: 聚合统计 - 按指标类型分组")
-    @Sql(scripts = "/test-data-mapper.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    void aggregateByMetricType_ShouldReturnGroupedStats() {
-        // Given: 任务ID
-        Long taskId = 1L;
-
-        // When: 按指标类型聚合统计
-        List<Map<String, Object>> stats = monitoringDataMapper.aggregateByMetricType(taskId);
-
-        // Then: 验证统计结果
-        assertNotNull(stats);
-        stats.forEach(stat -> {
-            assertNotNull(stat.get("metric_type"));
-            assertNotNull(stat.get("avg_value"));
-            assertNotNull(stat.get("max_value"));
-            assertNotNull(stat.get("min_value"));
-            assertNotNull(stat.get("count"));
-        });
+        // Then: 验证复杂字段正确保存
+        assertNotNull(saved.getId());
+        assertNotNull(saved.getResourceUsage());
+        assertEquals(75.5, saved.getResourceUsage().get("cpu_usage"));
+        assertNotNull(saved.getPerformanceMetrics());
+        assertEquals(150, saved.getPerformanceMetrics().get("avg_response_time_ms"));
     }
 
     /**
      * 辅助方法：创建监控数据
      */
-    private MonitoringData createMonitoringData(Long taskId, String metricType, Double metricValue) {
+    private MonitoringData createMonitoringData(String taskId, String status, int progress) {
         MonitoringData data = new MonitoringData();
         data.setTaskId(taskId);
-        data.setMetricType(metricType);
-        data.setMetricValue(metricValue);
-        data.setUnit("percent");
-        data.setRecordedAt(LocalDateTime.now());
-        data.setCreatedAt(LocalDateTime.now());
+        data.setStatus(status);
+        data.setProgress(progress);
+        data.setExecutedCases(progress);
+        data.setTotalCases(100);
+        data.setPassedCases((int) (progress * 0.9));
+        data.setFailedCases((int) (progress * 0.1));
+        data.setSkippedCases(0);
+        data.setStartTime(LocalDateTime.now());
+        data.setTimestamp(LocalDateTime.now());
+        data.setEnvironment("DEV");
+        data.setVersion("v1.0.0");
         return data;
     }
 }

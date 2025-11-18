@@ -1,7 +1,7 @@
 package com.synapsetest.testmanagement.service;
 
 import com.synapsetest.testmanagement.dto.TestTaskRequest;
-import com.synapsetest.testmanagement.dto.TestTaskResponse;
+import com.synapsetest.testmanagement.dto.response.TestTaskResponse;
 import com.synapsetest.testmanagement.exception.ResourceNotFoundException;
 import com.synapsetest.testmanagement.exception.ValidationException;
 import com.synapsetest.testmanagement.mapper.TestTaskMapper;

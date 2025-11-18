@@ -2,7 +2,7 @@ package com.synapsetest.testmanagement.service;
 
 import com.synapsetest.testmanagement.model.TestCase;
 import com.synapsetest.testmanagement.dto.TestCaseRequest;
-import com.synapsetest.testmanagement.dto.TestCaseResponse;
+import com.synapsetest.testmanagement.dto.response.TestCaseResponse;
 import com.synapsetest.testmanagement.exception.ValidationException;
 import com.synapsetest.testmanagement.mapper.TestCaseMapper;
 import org.junit.jupiter.api.DisplayName;

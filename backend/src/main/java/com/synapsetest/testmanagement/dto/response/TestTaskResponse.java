@@ -1,8 +1,9 @@
-package com.synapsetest.testmanagement.dto;
+package com.synapsetest.testmanagement.dto.response;
 
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * DTO for test task response (MyBatis version - using String for ID)
@@ -12,6 +13,7 @@ public class TestTaskResponse {
 
     private String id;
     private String name;
+    private String taskName;  // Alias for name, used in some API responses
     private String description;
     private String environment;
     private String version;
@@ -22,6 +24,7 @@ public class TestTaskResponse {
     private LocalDateTime updatedAt;
     private String createdBy;
     private TestRecommendation recommendation;
+    private Map<String, Object> aiRecommendation;  // AI recommendation data
 
     @Data
     public static class TestRecommendation {
@@ -32,3 +35,4 @@ public class TestTaskResponse {
         private String reasoning;
     }
 }
+

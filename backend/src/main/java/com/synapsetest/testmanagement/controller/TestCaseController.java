@@ -2,6 +2,7 @@ package com.synapsetest.testmanagement.controller;
 
 import com.synapsetest.testmanagement.constants.ApiVersion;
 import com.synapsetest.testmanagement.dto.*;
+import com.synapsetest.testmanagement.dto.response.TestCaseResponse;
 import com.synapsetest.testmanagement.service.AITestCaseGenerationService;
 import com.synapsetest.testmanagement.service.AITestCaseOptimizationService;
 import com.synapsetest.testmanagement.service.TestCaseService;

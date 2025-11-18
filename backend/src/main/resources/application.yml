@@ -54,6 +54,33 @@ server:
   port: 8080
   # No context-path - API versioning is handled in Controllers
 
+# Springdoc OpenAPI (Swagger) Configuration
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+    display-request-duration: true
+    doc-expansion: none
+    default-models-expand-depth: 1
+    default-model-expand-depth: 1
+    show-extensions: true
+    show-common-extensions: true
+    try-it-out-enabled: true
+  show-actuator: true
+  paths-to-match:
+    - /api/**
+  packages-to-scan:
+    - com.synapsetest.testmanagement.controller
+
+# API Version
+api:
+  version: 1.0.0
+
 management:
   endpoints:
     web:

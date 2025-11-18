@@ -1,7 +1,7 @@
 package com.synapsetest.testmanagement.service;
 
 import com.synapsetest.testmanagement.dto.TestCaseRequest;
-import com.synapsetest.testmanagement.dto.TestCaseResponse;
+import com.synapsetest.testmanagement.dto.response.TestCaseResponse;
 import com.synapsetest.testmanagement.exception.ResourceNotFoundException;
 import com.synapsetest.testmanagement.mapper.TestCaseMapper;
 import com.synapsetest.testmanagement.model.TestCase;

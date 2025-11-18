@@ -1,7 +1,7 @@
 package com.synapsetest.testmanagement.service;
 
 import com.synapsetest.testmanagement.dto.TestTaskRequest;
-import com.synapsetest.testmanagement.dto.TestTaskResponse;
+import com.synapsetest.testmanagement.dto.response.TestTaskResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

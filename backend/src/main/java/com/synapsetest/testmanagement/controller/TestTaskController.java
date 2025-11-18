@@ -3,7 +3,7 @@ package com.synapsetest.testmanagement.controller;
 import com.synapsetest.testmanagement.constants.ApiVersion;
 import com.synapsetest.testmanagement.dto.ApiResponse;
 import com.synapsetest.testmanagement.dto.TestTaskRequest;
-import com.synapsetest.testmanagement.dto.TestTaskResponse;
+import com.synapsetest.testmanagement.dto.response.TestTaskResponse;
 import com.synapsetest.testmanagement.service.TestTaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

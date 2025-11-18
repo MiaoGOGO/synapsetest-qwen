@@ -1,7 +1,7 @@
 package com.synapsetest.testmanagement.service;
 
 import com.synapsetest.testmanagement.dto.AITestCaseGenerationRequest;
-import com.synapsetest.testmanagement.dto.TestCaseResponse;
+import com.synapsetest.testmanagement.dto.response.TestCaseResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
