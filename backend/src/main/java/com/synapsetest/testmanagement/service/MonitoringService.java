@@ -1,17 +1,17 @@
 package com.synapsetest.testmanagement.service;
 
 import com.synapsetest.testmanagement.exception.ResourceNotFoundException;
+import com.synapsetest.testmanagement.mapper.MonitoringDataMapper;
 import com.synapsetest.testmanagement.model.MonitoringData;
-import com.synapsetest.testmanagement.repository.MonitoringDataRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Monitoring Service
@@ -22,10 +22,9 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-// @Profile("mongodb") // Temporarily disabled to show in Swagger UI
 public class MonitoringService {
 
-    private final MonitoringDataRepository monitoringDataRepository;
+    private final MonitoringDataMapper monitoringDataMapper;
 
     /**
      * Create monitoring data for a test task
@@ -34,6 +33,7 @@ public class MonitoringService {
         log.info("Creating monitoring data for task: {}", taskId);
 
         MonitoringData data = new MonitoringData();
+        data.setId(UUID.randomUUID().toString());
         data.setTaskId(taskId);
         data.setStatus(MonitoringData.Status.PENDING.name());
         data.setProgress(0);
@@ -45,20 +45,25 @@ public class MonitoringService {
         data.setEnvironment(environment);
         data.setVersion(version);
         data.setTimestamp(LocalDateTime.now());
+        data.setCreatedAt(LocalDateTime.now());
+        data.setUpdatedAt(LocalDateTime.now());
 
-        MonitoringData saved = monitoringDataRepository.save(data);
+        monitoringDataMapper.insert(data);
 
-        log.info("Monitoring data created: {}", saved.getId());
+        log.info("Monitoring data created: {}", data.getId());
 
-        return saved;
+        return data;
     }
 
     /**
      * Get monitoring data by task ID
      */
     public MonitoringData getMonitoringDataByTaskId(String taskId) {
-        return monitoringDataRepository.findByTaskId(taskId)
-                .orElseThrow(() -> new ResourceNotFoundException("MonitoringData", "taskId", taskId));
+        List<MonitoringData> dataList = monitoringDataMapper.selectByTaskId(taskId);
+        if (dataList.isEmpty()) {
+            throw new ResourceNotFoundException("MonitoringData", "taskId", taskId);
+        }
+        return dataList.get(0); // Return the most recent one
     }
 
     /**
@@ -105,12 +110,13 @@ public class MonitoringService {
         }
 
         existing.setTimestamp(LocalDateTime.now());
+        existing.setUpdatedAt(LocalDateTime.now());
 
-        MonitoringData updated = monitoringDataRepository.save(existing);
+        monitoringDataMapper.update(existing);
 
         log.info("Monitoring data updated for task: {}", taskId);
 
-        return updated;
+        return existing;
     }
 
     /**
@@ -127,10 +133,13 @@ public class MonitoringService {
         // Estimate end time (simple heuristic: 5 seconds per test case)
         LocalDateTime estimatedEnd = LocalDateTime.now().plusSeconds(totalCases * 5L);
         data.setEstimatedEndTime(estimatedEnd);
+        data.setUpdatedAt(LocalDateTime.now());
+
+        monitoringDataMapper.update(data);
 
         log.info("Started monitoring for task: {} with {} test cases", taskId, totalCases);
 
-        return monitoringDataRepository.save(data);
+        return data;
     }
 
     /**
@@ -161,10 +170,13 @@ public class MonitoringService {
         }
 
         data.setTimestamp(LocalDateTime.now());
+        data.setUpdatedAt(LocalDateTime.now());
+
+        monitoringDataMapper.update(data);
 
         log.debug("Progress updated for task {}: {}/{} cases executed", taskId, executedCases, data.getTotalCases());
 
-        return monitoringDataRepository.save(data);
+        return data;
     }
 
     /**
@@ -177,31 +189,34 @@ public class MonitoringService {
         data.setActualEndTime(LocalDateTime.now());
         data.setProgress(100);
         data.setTimestamp(LocalDateTime.now());
+        data.setUpdatedAt(LocalDateTime.now());
+
+        monitoringDataMapper.update(data);
 
         log.info("Completed monitoring for task: {} - Status: {}", taskId, data.getStatus());
 
-        return monitoringDataRepository.save(data);
+        return data;
     }
 
     /**
      * Get recent monitoring data
      */
     public List<MonitoringData> getRecentMonitoringData() {
-        return monitoringDataRepository.findTop20ByOrderByTimestampDesc();
+        return monitoringDataMapper.selectAll();
     }
 
     /**
      * Get monitoring data by environment
      */
     public List<MonitoringData> getMonitoringDataByEnvironment(String environment) {
-        return monitoringDataRepository.findByEnvironment(environment);
+        return monitoringDataMapper.selectByEnvironment(environment);
     }
 
     /**
      * Get running tasks
      */
     public List<MonitoringData> getRunningTasks() {
-        return monitoringDataRepository.findByStatus(MonitoringData.Status.RUNNING.name());
+        return monitoringDataMapper.selectByStatus(MonitoringData.Status.RUNNING.name());
     }
 
     /**
@@ -216,8 +231,11 @@ public class MonitoringService {
 
         data.getResourceUsage().putAll(resourceUsage);
         data.setTimestamp(LocalDateTime.now());
+        data.setUpdatedAt(LocalDateTime.now());
 
-        return monitoringDataRepository.save(data);
+        monitoringDataMapper.update(data);
+
+        return data;
     }
 
     /**
@@ -232,8 +250,11 @@ public class MonitoringService {
 
         data.getPerformanceMetrics().putAll(performanceMetrics);
         data.setTimestamp(LocalDateTime.now());
+        data.setUpdatedAt(LocalDateTime.now());
 
-        return monitoringDataRepository.save(data);
+        monitoringDataMapper.update(data);
+
+        return data;
     }
 
     /**

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.synapsetest.testmanagement.mapper.AIModelMapper">
+
+    <!-- Result Map for AIModel -->
+    <resultMap id="AIModelResultMap" type="com.synapsetest.testmanagement.model.AIModel">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="version" column="version"/>
+        <result property="description" column="description"/>
+        <result property="filePath" column="file_path"/>
+        <result property="securityStatus" column="security_status"/>
+        <result property="vulnerabilityScanResult" column="vulnerability_scan_result"/>
+        <result property="lastScanTime" column="last_scan_time"/>
+        <result property="complianceStatus" column="compliance_status"/>
+        <result property="metrics" column="metrics" typeHandler="com.synapsetest.testmanagement.config.JsonTypeHandler"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- Select by ID -->
+    <select id="selectById" resultMap="AIModelResultMap">
+        SELECT * FROM ai_models WHERE id = #{id}
+    </select>
+
+    <!-- Select All -->
+    <select id="selectAll" resultMap="AIModelResultMap">
+        SELECT * FROM ai_models
+    </select>
+
+    <!-- Select by Security Status -->
+    <select id="selectBySecurityStatus" resultMap="AIModelResultMap">
+        SELECT * FROM ai_models WHERE security_status = #{securityStatus}
+    </select>
+
+    <!-- Select by Compliance Status -->
+    <select id="selectByComplianceStatus" resultMap="AIModelResultMap">
+        SELECT * FROM ai_models WHERE compliance_status = #{complianceStatus}
+    </select>
+
+    <!-- Select by Name -->
+    <select id="selectByName" resultMap="AIModelResultMap">
+        SELECT * FROM ai_models WHERE name = #{name}
+    </select>
+
+    <!-- Select by Version -->
+    <select id="selectByVersion" resultMap="AIModelResultMap">
+        SELECT * FROM ai_models WHERE version = #{version}
+    </select>
+
+    <!-- Insert -->
+    <insert id="insert" parameterType="com.synapsetest.testmanagement.model.AIModel">
+        INSERT INTO ai_models(
+            id, name, version, description, file_path, security_status,
+            vulnerability_scan_result, last_scan_time, compliance_status,
+            metrics, created_at, updated_at
+        ) VALUES (
+            #{id},
+            #{name},
+            #{version},
+            #{description},
+            #{filePath},
+            #{securityStatus},
+            #{vulnerabilityScanResult},
+            #{lastScanTime},
+            #{complianceStatus},
+            #{metrics, typeHandler=com.synapsetest.testmanagement.config.JsonTypeHandler},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <!-- Update -->
+    <update id="update" parameterType="com.synapsetest.testmanagement.model.AIModel">
+        UPDATE ai_models SET
+            name = #{name},
+            version = #{version},
+            description = #{description},
+            file_path = #{filePath},
+            security_status = #{securityStatus},
+            vulnerability_scan_result = #{vulnerabilityScanResult},
+            last_scan_time = #{lastScanTime},
+            compliance_status = #{complianceStatus},
+            metrics = #{metrics, typeHandler=com.synapsetest.testmanagement.config.JsonTypeHandler},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <!-- Delete by ID -->
+    <delete id="deleteById">
+        DELETE FROM ai_models WHERE id = #{id}
+    </delete>
+
+    <!-- Count -->
+    <select id="count" resultType="int">
+        SELECT COUNT(*) FROM ai_models
+    </select>
+
+</mapper>
+

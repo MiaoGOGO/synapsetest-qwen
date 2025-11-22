@@ -1,41 +1,50 @@
 package com.synapsetest.testmanagement.model;
 
+import com.synapsetest.testmanagement.entity.BaseEntity;
 import lombok.Data;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
+import lombok.EqualsAndHashCode;
 
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
  * MonitoringData Model
  * Represents real-time monitoring metrics
- * Stored in MongoDB for time-series data
+ * MyBatis POJO (removed MongoDB annotations)
  *
  * User Story 3: 测试结果可视化分析
  * Task: T062 [P] [US3] Create MonitoringData model
  */
 @Data
-@Document(collection = "monitoring_data")
-public class MonitoringData {
+@EqualsAndHashCode(callSuper = true)
+public class MonitoringData extends BaseEntity {
 
-    @Id
-    private String id;
-
+    @NotBlank(message = "Task ID is required")
     private String taskId; // Reference to TestTask
 
+    @NotBlank(message = "Status is required")
     private String status; // PENDING, RUNNING, COMPLETED, FAILED
 
+    @Min(value = 0, message = "Progress must be at least 0")
+    @Max(value = 100, message = "Progress must not exceed 100")
     private Integer progress; // 0-100
 
+    @Min(value = 0, message = "Executed cases must be at least 0")
     private Integer executedCases;
 
+    @Min(value = 0, message = "Total cases must be at least 0")
     private Integer totalCases;
 
+    @Min(value = 0, message = "Passed cases must be at least 0")
     private Integer passedCases;
 
+    @Min(value = 0, message = "Failed cases must be at least 0")
     private Integer failedCases;
 
+    @Min(value = 0, message = "Skipped cases must be at least 0")
     private Integer skippedCases;
 
     private LocalDateTime startTime;

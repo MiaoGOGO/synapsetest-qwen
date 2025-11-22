@@ -1,15 +1,15 @@
 package com.synapsetest.testmanagement.service;
 
 import com.synapsetest.testmanagement.exception.ResourceNotFoundException;
+import com.synapsetest.testmanagement.mapper.QualityReportMapper;
 import com.synapsetest.testmanagement.model.QualityReport;
-import com.synapsetest.testmanagement.repository.QualityReportRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.UUID;
 
 /**
  * QualityReport Service
@@ -20,10 +20,9 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-// @Profile("mongodb") // Temporarily disabled to show in Swagger UI
 public class QualityReportService {
 
-    private final QualityReportRepository qualityReportRepository;
+    private final QualityReportMapper qualityReportMapper;
 
     /**
      * Generate quality report for a test task
@@ -32,11 +31,14 @@ public class QualityReportService {
         log.info("Generating quality report for task: {}", taskId);
 
         QualityReport report = new QualityReport();
+        report.setId(UUID.randomUUID().toString());
         report.setTaskId(taskId);
         report.setName(String.format("Quality Report - Task %s", taskId));
         report.setStatus(QualityReport.Status.GENERATING.name());
         report.setGeneratedAt(LocalDateTime.now());
         report.setTestResults(testResults);
+        report.setCreatedAt(LocalDateTime.now());
+        report.setUpdatedAt(LocalDateTime.now());
 
         // Calculate defect statistics
         Map<String, Integer> defectStats = calculateDefectStats(testResults);
@@ -56,34 +58,40 @@ public class QualityReportService {
 
         report.setStatus(QualityReport.Status.COMPLETED.name());
 
-        QualityReport saved = qualityReportRepository.save(report);
+        qualityReportMapper.insert(report);
 
-        log.info("Quality report generated successfully: {}", saved.getId());
+        log.info("Quality report generated successfully: {}", report.getId());
 
-        return saved;
+        return report;
     }
 
     /**
      * Get report by ID
      */
     public QualityReport getReportById(String id) {
-        return qualityReportRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("QualityReport", "id", id));
+        QualityReport report = qualityReportMapper.selectById(id);
+        if (report == null) {
+            throw new ResourceNotFoundException("QualityReport", "id", id);
+        }
+        return report;
     }
 
     /**
      * Get report by task ID
      */
     public QualityReport getReportByTaskId(String taskId) {
-        return qualityReportRepository.findByTaskId(taskId)
-                .orElseThrow(() -> new ResourceNotFoundException("QualityReport", "taskId", taskId));
+        List<QualityReport> reports = qualityReportMapper.selectByTaskId(taskId);
+        if (reports.isEmpty()) {
+            throw new ResourceNotFoundException("QualityReport", "taskId", taskId);
+        }
+        return reports.get(0); // Return the most recent one
     }
 
     /**
      * Get recent reports
      */
     public List<QualityReport> getRecentReports() {
-        return qualityReportRepository.findTop10ByOrderByGeneratedAtDesc();
+        return qualityReportMapper.selectTop10ByOrderByGeneratedAtDesc();
     }
 
     /**
