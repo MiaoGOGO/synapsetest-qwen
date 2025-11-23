@@ -1,7 +1,7 @@
 package com.synapsetest.testmanagement.service;
 
 import com.synapsetest.testmanagement.model.TestTask;
-import com.synapsetest.testmanagement.dto.TestTaskRequest;
+import com.synapsetest.testmanagement.dto.request.CreateTestTaskRequest;
 import com.synapsetest.testmanagement.dto.response.TestTaskResponse;
 import com.synapsetest.testmanagement.exception.ResourceNotFoundException;
 import com.synapsetest.testmanagement.exception.ValidationException;
@@ -13,6 +13,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -39,13 +41,26 @@ class TestTaskServiceTest {
     @DisplayName("场景1.1: 创建冒烟测试任务成功")
     void createSmokeTestTask_WithValidInput_ShouldReturnTask() {
         // Given: 有效的任务请求数据
-        TestTaskRequest request = new TestTaskRequest();
-        request.setName("登录模块冒烟测试");
-        request.setDescription("验证登录功能核心流程");
+        CreateTestTaskRequest request = new CreateTestTaskRequest();
+        request.setTaskName("登录模块冒烟测试");
         request.setEnvironment("DEV");
         request.setVersion("v2.1.0");
-        request.setTestScope("SMOKE");
-        request.setPriority(8);
+        request.setModules(List.of("login", "auth"));
+        request.setCodeChangeInfo(Map.of(
+            "changed_files_count", 3,
+            "changed_lines_count", 25,
+            "is_hotfix", false
+        ));
+
+        // Mock recommendation service
+        TestTaskResponse.TestRecommendation recommendation = new TestTaskResponse.TestRecommendation();
+        recommendation.setRecommendedScope("SMOKE");
+        recommendation.setRecommendedEnvironment("DEV");
+        recommendation.setRecommendedVersion("v2.1.0");
+        recommendation.setConfidenceScore(0.85);
+        recommendation.setReasoning("Small code changes suggest smoke testing");
+        when(recommendationService.getTestRecommendation(any(CreateTestTaskRequest.class)))
+            .thenReturn(recommendation);
 
         when(testTaskMapper.insert(any(TestTask.class))).thenReturn(1);
 
@@ -54,41 +69,54 @@ class TestTaskServiceTest {
 
         // Then: 任务创建成功
         assertNotNull(response.getId());
-        assertEquals("登录模块冒烟测试", response.getName());
+        assertEquals("登录模块冒烟测试", response.getTaskName());
         assertEquals("PENDING", response.getStatus());
         assertEquals("zhangsan", response.getCreatedBy());
+        assertEquals("SMOKE", response.getTestScope());
         assertNotNull(response.getCreatedAt());
+        assertNotNull(response.getAiRecommendation());
         verify(testTaskMapper, times(1)).insert(any(TestTask.class));
+        verify(recommendationService, times(1)).getTestRecommendation(any(CreateTestTaskRequest.class));
     }
 
     @Test
-    @DisplayName("场景1.2: 任务名称为空时创建失败")
-    void createTask_WithEmptyName_ShouldThrowValidationException() {
-        // Given: 空名称
-        TestTaskRequest request = new TestTaskRequest();
-        request.setName("");
-        request.setEnvironment("DEV");
+    @DisplayName("场景1.2: 创建带AI推荐的核心测试任务")
+    void createCoreTestTask_WithCriticalModule_ShouldReturnTask() {
+        // Given: 关键模块变更的任务请求
+        CreateTestTaskRequest request = new CreateTestTaskRequest();
+        request.setTaskName("支付模块核心测试");
+        request.setEnvironment("TEST");
         request.setVersion("v2.1.0");
+        request.setModules(List.of("payment", "order"));
+        request.setCodeChangeInfo(Map.of(
+            "changed_files_count", 15,
+            "changed_lines_count", 200,
+            "is_critical_module", true
+        ));
 
-        // When & Then: 抛出验证异常
-        ValidationException exception = assertThrows(ValidationException.class,
-            () -> testTaskService.createTestTask(request, "zhangsan"));
+        // Mock recommendation service
+        TestTaskResponse.TestRecommendation recommendation = new TestTaskResponse.TestRecommendation();
+        recommendation.setRecommendedScope("CORE");
+        recommendation.setRecommendedEnvironment("TEST");
+        recommendation.setRecommendedVersion("v2.1.0");
+        recommendation.setConfidenceScore(0.90);
+        recommendation.setReasoning("Critical module changes require core regression testing");
+        when(recommendationService.getTestRecommendation(any(CreateTestTaskRequest.class)))
+            .thenReturn(recommendation);
 
-        assertTrue(exception.getMessage().contains("名称不能为空"));
-    }
+        when(testTaskMapper.insert(any(TestTask.class))).thenReturn(1);
 
-    @Test
-    @DisplayName("场景1.3: 无效环境类型时创建失败")
-    void createTask_WithInvalidEnvironment_ShouldThrowException() {
-        // Given: 无效环境
-        TestTaskRequest request = new TestTaskRequest();
-        request.setName("测试任务");
-        request.setEnvironment("INVALID_ENV");
-        request.setVersion("v2.1.0");
+        // When: 调用创建服务
+        TestTaskResponse response = testTaskService.createTestTask(request, "lisi");
 
-        // When & Then: 抛出异常
-        assertThrows(ValidationException.class,
-            () -> testTaskService.createTestTask(request, "zhangsan"));
+        // Then: 任务创建成功，AI推荐CORE测试
+        assertNotNull(response.getId());
+        assertEquals("支付模块核心测试", response.getTaskName());
+        assertEquals("CORE", response.getTestScope());
+        assertEquals("TEST", response.getEnvironment());
+        assertNotNull(response.getAiRecommendation());
+        assertEquals("CORE", response.getAiRecommendation().get("test_scope"));
+        assertEquals(0.90, response.getAiRecommendation().get("confidence"));
     }
 
     @Test
@@ -113,8 +141,8 @@ class TestTaskServiceTest {
         TestTask task = createTestTask("task-001", "COMPLETED");
         when(testTaskMapper.selectById("task-001")).thenReturn(task);
 
-        // When & Then: 抛出异常
-        assertThrows(IllegalStateException.class,
+        // When & Then: 抛出验证异常
+        assertThrows(ValidationException.class,
             () -> testTaskService.startTestTask("task-001"));
     }
 

@@ -1,6 +1,7 @@
 package com.synapsetest.testmanagement.service;
 
 import com.synapsetest.testmanagement.dto.TestTaskRequest;
+import com.synapsetest.testmanagement.dto.request.CreateTestTaskRequest;
 import com.synapsetest.testmanagement.dto.response.TestTaskResponse;
 import com.synapsetest.testmanagement.exception.ResourceNotFoundException;
 import com.synapsetest.testmanagement.exception.ValidationException;
@@ -11,7 +12,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -32,23 +35,23 @@ public class TestTaskService {
     /**
      * Create a new test task with AI recommendations
      */
-    public TestTaskResponse createTestTask(TestTaskRequest request, String username) {
-        log.info("Creating test task: {} by user: {}", request.getName(), username);
+    public TestTaskResponse createTestTask(CreateTestTaskRequest request, String username) {
+        log.info("Creating test task: {} by user: {}", request.getTaskName(), username);
 
-        // Get AI recommendations
+        // Get AI recommendations based on code change info
         TestTaskResponse.TestRecommendation recommendation =
                 recommendationService.getTestRecommendation(request);
 
         // Create test task entity
         TestTask testTask = new TestTask();
         testTask.setId(UUID.randomUUID().toString());
-        testTask.setName(request.getName());
-        testTask.setDescription(request.getDescription());
+        testTask.setName(request.getTaskName());
+        testTask.setDescription("Test task for modules: " + String.join(", ", request.getModules()));
         testTask.setEnvironment(request.getEnvironment());
         testTask.setVersion(request.getVersion());
-        testTask.setTestScope(request.getTestScope());
+        testTask.setTestScope(recommendation.getRecommendedScope());
         testTask.setStatus(TestTask.Status.PENDING.name());
-        testTask.setPriority(request.getPriority() != null ? request.getPriority() : 0);
+        testTask.setPriority(8); // Default priority for AI-recommended tasks
         testTask.setCreatedBy(username);
         testTask.setCreatedAt(LocalDateTime.now());
         testTask.setUpdatedAt(LocalDateTime.now());
@@ -139,12 +142,52 @@ public class TestTaskService {
     }
 
     /**
+     * Update task status
+     */
+    public TestTaskResponse updateTaskStatus(String id, String newStatus) {
+        TestTask testTask = testTaskMapper.selectById(id);
+        if (testTask == null) {
+            throw new ResourceNotFoundException("TestTask", "id", id);
+        }
+
+        // Validate status transition
+        String currentStatus = testTask.getStatus();
+        validateStatusTransition(currentStatus, newStatus);
+
+        testTask.setStatus(newStatus);
+        testTask.setUpdatedAt(LocalDateTime.now());
+        testTaskMapper.update(testTask);
+
+        log.info("Test task status updated: {} from {} to {}", id, currentStatus, newStatus);
+
+        return convertToResponse(testTask, null);
+    }
+
+    /**
+     * Validate status transition
+     */
+    private void validateStatusTransition(String currentStatus, String newStatus) {
+        // COMPLETED tasks cannot be changed
+        if (TestTask.Status.COMPLETED.name().equals(currentStatus)) {
+            throw new ValidationException("Cannot update status of a completed task");
+        }
+
+        // Validate new status is valid
+        try {
+            TestTask.Status.valueOf(newStatus);
+        } catch (IllegalArgumentException e) {
+            throw new ValidationException("Invalid status: " + newStatus);
+        }
+    }
+
+    /**
      * Convert entity to response DTO
      */
     private TestTaskResponse convertToResponse(TestTask task, TestTaskResponse.TestRecommendation recommendation) {
         TestTaskResponse response = new TestTaskResponse();
         response.setId(task.getId());
         response.setName(task.getName());
+        response.setTaskName(task.getName()); // Set both name and taskName for compatibility
         response.setDescription(task.getDescription());
         response.setEnvironment(task.getEnvironment());
         response.setVersion(task.getVersion());
@@ -155,6 +198,17 @@ public class TestTaskService {
         response.setUpdatedAt(task.getUpdatedAt());
         response.setCreatedBy(task.getCreatedBy());
         response.setRecommendation(recommendation);
+        
+        // Convert recommendation to aiRecommendation Map format for API compatibility
+        if (recommendation != null) {
+            Map<String, Object> aiRecommendation = new HashMap<>();
+            aiRecommendation.put("test_scope", recommendation.getRecommendedScope());
+            aiRecommendation.put("environment", recommendation.getRecommendedEnvironment());
+            aiRecommendation.put("version", recommendation.getRecommendedVersion());
+            aiRecommendation.put("confidence", recommendation.getConfidenceScore());
+            aiRecommendation.put("reasoning", recommendation.getReasoning());
+            response.setAiRecommendation(aiRecommendation);
+        }
 
         return response;
     }

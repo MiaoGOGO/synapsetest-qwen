@@ -47,7 +47,7 @@ public class TestTaskControllerIntegrationTest {
     private ObjectMapper objectMapper;
 
     private String getBaseUrl() {
-        return "http://localhost:" + port + "/api/v1/tasks";
+        return "http://localhost:" + port + "/api/v1/test-tasks";
     }
 
     @Test

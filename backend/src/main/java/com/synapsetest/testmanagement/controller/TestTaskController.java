@@ -3,6 +3,7 @@ package com.synapsetest.testmanagement.controller;
 import com.synapsetest.testmanagement.constants.ApiVersion;
 import com.synapsetest.testmanagement.dto.ApiResponse;
 import com.synapsetest.testmanagement.dto.TestTaskRequest;
+import com.synapsetest.testmanagement.dto.request.CreateTestTaskRequest;
 import com.synapsetest.testmanagement.dto.response.TestTaskResponse;
 import com.synapsetest.testmanagement.service.TestTaskService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -67,17 +68,17 @@ public class TestTaskController {
             )
     })
     @PostMapping
-    public ResponseEntity<ApiResponse<TestTaskResponse>> createTestTask(
+    public ResponseEntity<TestTaskResponse> createTestTask(
             @Parameter(description = "测试任务创建请求", required = true)
-            @Valid @RequestBody TestTaskRequest request,
-            @Parameter(description = "用户名", required = false, example = "zhangsan")
-            @RequestHeader(value = "X-User-Name", defaultValue = "system") String username) {
+            @Valid @RequestBody CreateTestTaskRequest request,
+            @Parameter(description = "用户ID", required = false, example = "zhangsan")
+            @RequestHeader(value = "X-User-Id", defaultValue = "system") String userId) {
 
-        TestTaskResponse response = testTaskService.createTestTask(request, username);
+        TestTaskResponse response = testTaskService.createTestTask(request, userId);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Test task created successfully", response));
+                .body(response);
     }
 
     /**
@@ -99,11 +100,11 @@ public class TestTaskController {
             )
     })
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<TestTaskResponse>> getTestTask(
+    public ResponseEntity<TestTaskResponse> getTestTask(
             @Parameter(description = "任务ID", required = true, example = "task-123456")
             @PathVariable String id) {
         TestTaskResponse response = testTaskService.getTestTaskById(id);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -119,9 +120,9 @@ public class TestTaskController {
             description = "获取成功"
     )
     @GetMapping
-    public ResponseEntity<ApiResponse<List<TestTaskResponse>>> getAllTestTasks() {
+    public ResponseEntity<List<TestTaskResponse>> getAllTestTasks() {
         List<TestTaskResponse> response = testTaskService.getAllTestTasks();
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -137,11 +138,11 @@ public class TestTaskController {
             description = "查询成功"
     )
     @GetMapping(params = "status")
-    public ResponseEntity<ApiResponse<List<TestTaskResponse>>> getTestTasksByStatus(
+    public ResponseEntity<List<TestTaskResponse>> getTestTasksByStatus(
             @Parameter(description = "任务状态", required = true, example = "PENDING")
             @RequestParam String status) {
         List<TestTaskResponse> response = testTaskService.getTestTasksByStatus(status);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -167,11 +168,11 @@ public class TestTaskController {
             )
     })
     @PostMapping("/{id}/start")
-    public ResponseEntity<ApiResponse<TestTaskResponse>> startTestTask(
+    public ResponseEntity<TestTaskResponse> startTestTask(
             @Parameter(description = "任务ID", required = true, example = "task-123456")
             @PathVariable String id) {
         TestTaskResponse response = testTaskService.startTestTask(id);
-        return ResponseEntity.ok(ApiResponse.success("Test task started", response));
+        return ResponseEntity.ok(response);
     }
 
     /**

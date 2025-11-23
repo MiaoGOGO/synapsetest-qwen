@@ -46,6 +46,6 @@ public class TestTask extends BaseEntity {
     }
 
     public enum Environment {
-        DEV, STAGING, PROD
+        DEV, TEST, STAGING, PROD
     }
 }
