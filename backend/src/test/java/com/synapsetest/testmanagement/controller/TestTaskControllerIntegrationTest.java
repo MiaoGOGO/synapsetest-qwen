@@ -235,11 +235,11 @@ public class TestTaskControllerIntegrationTest {
     @Test
     @DisplayName("场景1.6: 参数验证 - 缺少必填字段")
     void createTestTask_WithMissingRequiredFields_ShouldReturnBadRequest() {
-        // Given: 准备不完整的请求（缺少taskName）
+        // Given: 准备不完整的请求（缺少taskName, modules, codeChangeInfo）
         CreateTestTaskRequest request = new CreateTestTaskRequest();
         request.setEnvironment("DEV");
         request.setVersion("v1.2.0");
-        // taskName未设置
+        // taskName、modules、codeChangeInfo未设置（这些都是必填字段）
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -257,8 +257,19 @@ public class TestTaskControllerIntegrationTest {
         // Then: 验证返回400错误
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         Map<String, Object> errorResponse = response.getBody();
-        assertNotNull(errorResponse);
-        assertTrue(errorResponse.containsKey("error") || errorResponse.containsKey("message"));
+        assertNotNull(errorResponse, "Error response should not be null");
+        
+        // 验证错误响应包含必要的字段
+        assertTrue(errorResponse.containsKey("message"), "Response should contain 'message' field");
+        assertEquals("Validation failed", errorResponse.get("message"), "Message should indicate validation failure");
+        
+        // 验证包含字段错误详情
+        assertTrue(errorResponse.containsKey("errors"), "Response should contain 'errors' field");
+        
+        @SuppressWarnings("unchecked")
+        Map<String, String> fieldErrors = (Map<String, String>) errorResponse.get("errors");
+        assertNotNull(fieldErrors, "Field errors should not be null");
+        assertTrue(fieldErrors.size() > 0, "Should have at least one field error");
     }
 
     @Test

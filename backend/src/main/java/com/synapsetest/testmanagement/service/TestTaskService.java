@@ -68,6 +68,7 @@ public class TestTaskService {
 
     /**
      * Get test task by ID
+     * Note: Soft-deleted tasks (CANCELLED status) are treated as not found
      */
     public TestTaskResponse getTestTaskById(String id) {
         TestTask testTask = testTaskMapper.selectById(id);
@@ -75,45 +76,69 @@ public class TestTaskService {
             throw new ResourceNotFoundException("TestTask", "id", id);
         }
 
+        // Treat soft-deleted (CANCELLED) tasks as not found
+        if (TestTask.Status.CANCELLED.name().equals(testTask.getStatus())) {
+            throw new ResourceNotFoundException("TestTask", "id", id);
+        }
+
         return convertToResponse(testTask, null);
     }
 
     /**
-     * Get all test tasks
+     * Get all test tasks (excluding soft-deleted tasks)
      */
     public List<TestTaskResponse> getAllTestTasks() {
         return testTaskMapper.selectAll()
                 .stream()
+                .filter(task -> !TestTask.Status.CANCELLED.name().equals(task.getStatus()))
                 .map(task -> convertToResponse(task, null))
                 .collect(Collectors.toList());
     }
 
     /**
      * Get test tasks by status
+     * Note: When querying non-CANCELLED status, soft-deleted tasks are excluded
      */
     public List<TestTaskResponse> getTestTasksByStatus(String status) {
-        return testTaskMapper.selectByStatus(status)
-                .stream()
+        List<TestTask> tasks = testTaskMapper.selectByStatus(status);
+        
+        // If explicitly querying CANCELLED status, return all cancelled tasks
+        // Otherwise, exclude soft-deleted tasks
+        if (TestTask.Status.CANCELLED.name().equals(status)) {
+            return tasks.stream()
+                    .map(task -> convertToResponse(task, null))
+                    .collect(Collectors.toList());
+        }
+        
+        // For other statuses, exclude CANCELLED tasks (soft-deleted)
+        return tasks.stream()
+                .filter(task -> !TestTask.Status.CANCELLED.name().equals(task.getStatus()))
                 .map(task -> convertToResponse(task, null))
                 .collect(Collectors.toList());
     }
 
     /**
      * Get test tasks by status with pagination
+     * Note: When querying non-CANCELLED status, soft-deleted tasks are excluded
      */
     public PageResponse<TestTaskResponse> getTestTasksByStatusWithPagination(
             String status, int page, int size) {
         
         // Get all tasks with the given status
         List<TestTask> allTasks = testTaskMapper.selectByStatus(status);
+        
+        // If not explicitly querying CANCELLED status, filter out soft-deleted tasks
+        if (!TestTask.Status.CANCELLED.name().equals(status)) {
+            allTasks = allTasks.stream()
+                    .filter(task -> !TestTask.Status.CANCELLED.name().equals(task.getStatus()))
+                    .collect(Collectors.toList());
+        }
+        
         long totalElements = allTasks.size();
         
         // Manual pagination
-        int start = page * size;
-        int end = Math.min(start + size, allTasks.size());
-        
         List<TestTaskResponse> pagedTasks = allTasks.stream()
-                .skip(start)
+                .skip((long) page * size)
                 .limit(size)
                 .map(task -> convertToResponse(task, null))
                 .collect(Collectors.toList());
