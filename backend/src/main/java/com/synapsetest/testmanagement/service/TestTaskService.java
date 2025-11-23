@@ -205,6 +205,23 @@ public class TestTaskService {
     }
 
     /**
+     * Delete a test task (soft delete by setting status to CANCELLED)
+     */
+    public void deleteTestTask(String id) {
+        TestTask testTask = testTaskMapper.selectById(id);
+        if (testTask == null) {
+            throw new ResourceNotFoundException("TestTask", "id", id);
+        }
+
+        // Soft delete: mark as cancelled
+        testTask.setStatus(TestTask.Status.CANCELLED.name());
+        testTask.setUpdatedAt(LocalDateTime.now());
+        testTaskMapper.update(testTask);
+
+        log.info("Test task soft deleted (marked as CANCELLED): {}", id);
+    }
+
+    /**
      * Convert entity to response DTO
      */
     private TestTaskResponse convertToResponse(TestTask task, TestTaskResponse.TestRecommendation recommendation) {

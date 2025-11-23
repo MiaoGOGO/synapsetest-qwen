@@ -6,6 +6,7 @@ import com.synapsetest.testmanagement.dto.TestTaskRequest;
 import com.synapsetest.testmanagement.dto.request.CreateTestTaskRequest;
 import com.synapsetest.testmanagement.dto.response.PageResponse;
 import com.synapsetest.testmanagement.dto.response.TestTaskResponse;
+import com.synapsetest.testmanagement.exception.ValidationException;
 import com.synapsetest.testmanagement.service.TestTaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -212,10 +213,72 @@ public class TestTaskController {
             )
     })
     @PostMapping("/{id}/cancel")
-    public ResponseEntity<ApiResponse<TestTaskResponse>> cancelTestTask(
+    public ResponseEntity<TestTaskResponse> cancelTestTask(
             @Parameter(description = "任务ID", required = true, example = "task-123456")
             @PathVariable String id) {
         TestTaskResponse response = testTaskService.cancelTestTask(id);
-        return ResponseEntity.ok(ApiResponse.success("Test task cancelled", response));
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Update test task status
+     * PATCH /api/v1/test-tasks/{id}/status
+     */
+    @Operation(
+            summary = "更新任务状态",
+            description = "更新指定ID的测试任务状态"
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "状态更新成功"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "任务不存在"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "无效的状态转换"
+            )
+    })
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<TestTaskResponse> updateTaskStatus(
+            @Parameter(description = "任务ID", required = true)
+            @PathVariable String id,
+            @Parameter(description = "状态更新请求", required = true)
+            @RequestBody java.util.Map<String, String> statusUpdate) {
+        String newStatus = statusUpdate.get("status");
+        if (newStatus == null || newStatus.isEmpty()) {
+            throw new ValidationException("Status is required");
+        }
+        TestTaskResponse response = testTaskService.updateTaskStatus(id, newStatus);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Delete a test task (soft delete)
+     * DELETE /api/v1/test-tasks/{id}
+     */
+    @Operation(
+            summary = "删除测试任务",
+            description = "删除指定ID的测试任务（软删除，标记为CANCELLED）"
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "204",
+                    description = "删除成功"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "任务不存在"
+            )
+    })
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteTestTask(
+            @Parameter(description = "任务ID", required = true, example = "task-123456")
+            @PathVariable String id) {
+        testTaskService.deleteTestTask(id);
+        return ResponseEntity.noContent().build();
     }
 }

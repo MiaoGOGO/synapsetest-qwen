@@ -175,7 +175,7 @@ public class TestTaskControllerIntegrationTest {
     @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void getTestTaskById_WithValidId_ShouldReturnTaskDetails() {
         // Given: 已存在的任务ID（通过SQL脚本插入）
-        Long taskId = 1L;
+        String taskId = "task-001"; // UUID from test-data-us1.sql
         String url = getBaseUrl() + "/" + taskId;
 
         HttpHeaders headers = new HttpHeaders();
@@ -204,7 +204,7 @@ public class TestTaskControllerIntegrationTest {
     @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void updateTaskStatus_WithValidData_ShouldUpdateSuccessfully() {
         // Given: 准备更新请求
-        Long taskId = 1L;
+        String taskId = "task-pending"; // UUID from test-data-us1.sql (PENDING status)
         String url = getBaseUrl() + "/" + taskId + "/status";
 
         Map<String, String> updateRequest = Map.of(
@@ -265,7 +265,7 @@ public class TestTaskControllerIntegrationTest {
     @DisplayName("场景1.7: 获取不存在的任务 - 返回404")
     void getTestTaskById_WithNonExistingId_ShouldReturnNotFound() {
         // Given: 不存在的任务ID
-        Long nonExistingId = 999999L;
+        String nonExistingId = "non-existing-task-uuid";
         String url = getBaseUrl() + "/" + nonExistingId;
 
         HttpHeaders headers = new HttpHeaders();
@@ -290,7 +290,7 @@ public class TestTaskControllerIntegrationTest {
     @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void deleteTestTask_WithValidId_ShouldSoftDelete() {
         // Given: 已存在的任务ID
-        Long taskId = 1L;
+        String taskId = "task-001"; // UUID from test-data-us1.sql
         String url = getBaseUrl() + "/" + taskId;
 
         HttpHeaders headers = new HttpHeaders();
