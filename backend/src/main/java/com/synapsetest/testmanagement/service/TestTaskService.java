@@ -247,6 +247,14 @@ public class TestTaskService {
     }
 
     /**
+     * Get AI recommendation for test task
+     */
+    public TestTaskResponse.TestRecommendation getAiRecommendation(CreateTestTaskRequest request) {
+        log.info("Getting AI recommendation for context: {}", request.getTaskName());
+        return recommendationService.getTestRecommendation(request);
+    }
+
+    /**
      * Convert entity to response DTO
      */
     private TestTaskResponse convertToResponse(TestTask task, TestTaskResponse.TestRecommendation recommendation) {
