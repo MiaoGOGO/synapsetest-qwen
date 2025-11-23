@@ -217,10 +217,10 @@ public class TestTaskControllerIntegrationTest {
         headers.set("X-User-Id", "zhangsan");
         HttpEntity<Map<String, String>> entity = new HttpEntity<>(updateRequest, headers);
 
-        // When: 发送PATCH请求
+        // When: 发送POST请求更新状态
         ResponseEntity<TestTaskResponse> response = restTemplate.exchange(
             url,
-            HttpMethod.PATCH,
+            HttpMethod.POST,
             entity,
             TestTaskResponse.class
         );

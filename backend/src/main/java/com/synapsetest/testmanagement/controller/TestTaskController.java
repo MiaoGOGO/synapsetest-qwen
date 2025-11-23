@@ -222,7 +222,7 @@ public class TestTaskController {
 
     /**
      * Update test task status
-     * PATCH /api/v1/test-tasks/{id}/status
+     * POST /api/v1/test-tasks/{id}/status
      */
     @Operation(
             summary = "更新任务状态",
@@ -242,7 +242,7 @@ public class TestTaskController {
                     description = "无效的状态转换"
             )
     })
-    @PatchMapping("/{id}/status")
+    @PostMapping("/{id}/status")
     public ResponseEntity<TestTaskResponse> updateTaskStatus(
             @Parameter(description = "任务ID", required = true)
             @PathVariable String id,
