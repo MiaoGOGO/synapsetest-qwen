@@ -4,6 +4,7 @@ import com.synapsetest.testmanagement.constants.ApiVersion;
 import com.synapsetest.testmanagement.dto.ApiResponse;
 import com.synapsetest.testmanagement.dto.TestTaskRequest;
 import com.synapsetest.testmanagement.dto.request.CreateTestTaskRequest;
+import com.synapsetest.testmanagement.dto.response.PageResponse;
 import com.synapsetest.testmanagement.dto.response.TestTaskResponse;
 import com.synapsetest.testmanagement.service.TestTaskService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -126,21 +127,34 @@ public class TestTaskController {
     }
 
     /**
-     * Get test tasks by status
-     * GET /api/v1/test-tasks?status=PENDING
+     * Get test tasks by status with pagination support
+     * GET /api/v1/test-tasks?status=PENDING&page=0&size=10
      */
     @Operation(
-            summary = "按状态查询测试任务",
-            description = "根据任务状态筛选测试任务列表"
+            summary = "按状态查询测试任务（支持分页）",
+            description = "根据任务状态筛选测试任务列表，支持分页参数"
     )
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
             description = "查询成功"
     )
     @GetMapping(params = "status")
-    public ResponseEntity<List<TestTaskResponse>> getTestTasksByStatus(
+    public ResponseEntity<?> getTestTasksByStatus(
             @Parameter(description = "任务状态", required = true, example = "PENDING")
-            @RequestParam String status) {
+            @RequestParam String status,
+            @Parameter(description = "页码（从0开始）", required = false, example = "0")
+            @RequestParam(required = false) Integer page,
+            @Parameter(description = "每页大小", required = false, example = "10")
+            @RequestParam(required = false) Integer size) {
+        
+        // If pagination parameters are provided, return paginated response
+        if (page != null && size != null) {
+            PageResponse<TestTaskResponse> response =
+                testTaskService.getTestTasksByStatusWithPagination(status, page, size);
+            return ResponseEntity.ok(response);
+        }
+        
+        // Otherwise, return simple list
         List<TestTaskResponse> response = testTaskService.getTestTasksByStatus(status);
         return ResponseEntity.ok(response);
     }

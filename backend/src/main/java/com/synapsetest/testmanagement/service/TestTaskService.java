@@ -2,6 +2,7 @@ package com.synapsetest.testmanagement.service;
 
 import com.synapsetest.testmanagement.dto.TestTaskRequest;
 import com.synapsetest.testmanagement.dto.request.CreateTestTaskRequest;
+import com.synapsetest.testmanagement.dto.response.PageResponse;
 import com.synapsetest.testmanagement.dto.response.TestTaskResponse;
 import com.synapsetest.testmanagement.exception.ResourceNotFoundException;
 import com.synapsetest.testmanagement.exception.ValidationException;
@@ -95,6 +96,29 @@ public class TestTaskService {
                 .stream()
                 .map(task -> convertToResponse(task, null))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Get test tasks by status with pagination
+     */
+    public PageResponse<TestTaskResponse> getTestTasksByStatusWithPagination(
+            String status, int page, int size) {
+        
+        // Get all tasks with the given status
+        List<TestTask> allTasks = testTaskMapper.selectByStatus(status);
+        long totalElements = allTasks.size();
+        
+        // Manual pagination
+        int start = page * size;
+        int end = Math.min(start + size, allTasks.size());
+        
+        List<TestTaskResponse> pagedTasks = allTasks.stream()
+                .skip(start)
+                .limit(size)
+                .map(task -> convertToResponse(task, null))
+                .collect(Collectors.toList());
+        
+        return PageResponse.of(pagedTasks, page, size, totalElements);
     }
 
     /**
