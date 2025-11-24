@@ -18,7 +18,7 @@ import pytest
 from unittest.mock import Mock, patch
 from typing import List, Dict
 
-from ai_service.models.optimization.prioritizer import (
+from models.optimization.prioritizer import (
     TestCasePrioritizer,
     PriorityFactors
 )

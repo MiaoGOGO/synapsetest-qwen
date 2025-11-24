@@ -58,7 +58,7 @@ class TestAITestCaseGenerationAPI:
         response = client.post("/api/v1/ai/testcase/generate", json=request_data)
 
         # Then
-        assert response.status_code == 400
+        assert response.status_code == 422
 
     def test_scenario_3_requirement_too_short_returns_400(self):
         """场景3: 需求文本太短返回400"""
@@ -73,7 +73,7 @@ class TestAITestCaseGenerationAPI:
         response = client.post("/api/v1/ai/testcase/generate", json=request_data)
 
         # Then
-        assert response.status_code == 400
+        assert response.status_code == 422
 
     def test_scenario_4_too_many_cases_returns_400(self):
         """场景4: 请求生成过多用例返回400"""
@@ -88,7 +88,7 @@ class TestAITestCaseGenerationAPI:
         response = client.post("/api/v1/ai/testcase/generate", json=request_data)
 
         # Then
-        assert response.status_code == 400
+        assert response.status_code == 422
 
     def test_scenario_5_deduplication_works(self):
         """场景5: 去重功能正常工作"""
@@ -171,9 +171,9 @@ class TestOptimizationEndpoints:
         """场景9: 优先级排序端点正常工作"""
         # Given
         testcases = [
-            {"name": "用例1", "priority": "P2", "steps": ["步骤1"]},
-            {"name": "用例2", "priority": "P0", "steps": ["步骤2"]},
-            {"name": "用例3", "priority": "P1", "steps": ["步骤3"]}
+            {"name": "用例1", "priority": "P2", "steps": [{"step": 1, "action": "步骤1", "expected": "结果1"}]},
+            {"name": "用例2", "priority": "P0", "steps": [{"step": 1, "action": "步骤2", "expected": "结果2"}]},
+            {"name": "用例3", "priority": "P1", "steps": [{"step": 1, "action": "步骤3", "expected": "结果3"}]}
         ]
 
         # When
@@ -197,14 +197,14 @@ class TestOptimizationEndpoints:
             {
                 "name": "测试用例1",
                 "priority": "P0",
-                "steps": ["步骤1", "步骤2"],
+                "steps": [{"step": 1, "action": "步骤1", "expected": "结果1"}, {"step": 2, "action": "步骤2", "expected": "结果2"}],
                 "tags": ["login"],
                 "type": "功能测试"
             },
             {
                 "name": "测试用例2",
                 "priority": "P1",
-                "steps": ["步骤1"],
+                "steps": [{"step": 1, "action": "步骤1", "expected": "结果1"}],
                 "tags": ["login", "security"],
                 "type": "安全测试"
             }

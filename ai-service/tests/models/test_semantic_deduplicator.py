@@ -20,7 +20,7 @@ from unittest.mock import Mock, patch, MagicMock
 import numpy as np
 from typing import List, Dict
 
-from ai_service.models.optimization.deduplicator import (
+from models.optimization.deduplicator import (
     SemanticDeduplicator,
     TestCaseEmbedding
 )

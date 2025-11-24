@@ -9,6 +9,34 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class PriorityFactors:
+    """Priority factors configuration"""
+    
+    def __init__(
+        self,
+        ai_confidence: float = 0.3,
+        priority: float = 0.3,
+        coverage: float = 0.2,
+        risk: float = 0.2
+    ):
+        self.ai_confidence = ai_confidence
+        self.priority = priority
+        self.coverage = coverage
+        self.risk = risk
+        
+    def normalize(self) -> 'PriorityFactors':
+        """Normalize weights to sum to 1.0"""
+        total = self.ai_confidence + self.priority + self.coverage + self.risk
+        if total == 0:
+            return self
+        return PriorityFactors(
+            ai_confidence=self.ai_confidence / total,
+            priority=self.priority / total,
+            coverage=self.coverage / total,
+            risk=self.risk / total
+        )
+
+
 class TestCasePrioritizer:
     """
     Intelligent test case prioritization using multi-factor scoring

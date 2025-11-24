@@ -1,7 +1,36 @@
 """
 pytest配置文件
 """
+import sys
+from pathlib import Path
+
+# 添加 ai-service 目录到 Python 路径
+ai_service_path = Path(__file__).parent.parent
+if str(ai_service_path) not in sys.path:
+    sys.path.insert(0, str(ai_service_path))
+
 import pytest
+from unittest.mock import MagicMock, patch
+from data.mongodb_client import mongodb_client
+
+@pytest.fixture(autouse=True)
+def mock_mongodb():
+    """Mock MongoDB client for all tests"""
+    # Patch methods on the singleton instance
+    with patch.object(mongodb_client, 'get_similar_testcases', return_value=[]), \
+         patch.object(mongodb_client, 'get_company_standards') as mock_standards, \
+         patch.object(mongodb_client, 'save_testcase_generation_history', return_value="mock_id"), \
+         patch.object(mongodb_client, 'update_user_feedback', return_value=True):
+        
+        # Setup default standards
+        mock_standards.return_value = {
+            'naming_convention': 'descriptive_action_expected',
+            'priority_levels': ['P0', 'P1', 'P2', 'P3'],
+            'test_types': ['功能测试', '性能测试', '安全测试', '兼容性测试'],
+            'required_fields': ['name', 'steps', 'expected_result', 'priority']
+        }
+        
+        yield mongodb_client
 
 
 @pytest.fixture

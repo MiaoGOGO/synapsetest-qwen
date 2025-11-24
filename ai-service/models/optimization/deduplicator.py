@@ -10,6 +10,27 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
+class TestCaseEmbedding:
+    """Test case embedding representation"""
+    
+    def __init__(self, testcase: Dict[str, Any]):
+        self.case_name = testcase.get('name', '')
+        self.steps = testcase.get('steps', [])
+        self.expected_result = testcase.get('expected_result', '')
+        self.module = testcase.get('module', '')
+        self.combined_text = self._generate_combined_text(testcase)
+        
+    def _generate_combined_text(self, testcase: Dict[str, Any]) -> str:
+        """Generate combined text representation"""
+        parts = [
+            testcase.get('name', ''),
+            ' '.join(str(s) for s in testcase.get('steps', [])),
+            testcase.get('expected_result', ''),
+            testcase.get('module', '')
+        ]
+        return ' '.join(p for p in parts if p)
+
+
 class SemanticDeduplicator:
     """
     Test case semantic deduplication using Sentence-BERT

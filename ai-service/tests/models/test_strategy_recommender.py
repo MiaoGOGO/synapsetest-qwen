@@ -20,7 +20,7 @@ from unittest.mock import Mock, patch, MagicMock
 import numpy as np
 from typing import Dict, Any
 
-from ai_service.models.recommendation.strategy_recommender import (
+from models.recommendation.strategy_recommender import (
     TestStrategyRecommender,
     RuleEngine
 )

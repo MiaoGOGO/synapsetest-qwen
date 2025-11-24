@@ -8,7 +8,7 @@ import logging
 from datetime import datetime
 
 from models.recommendation.strategy_recommender import TestStrategyRecommender
-from models.recommendation.risk_predictor import RiskPredictionModel, EnvironmentRecommender
+from models.recommendation.risk_predictor import RiskPredictor, EnvironmentRecommender
 from data.mongodb_client import mongodb_client
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ class RecommendationService:
 
     def __init__(self):
         self.strategy_recommender = TestStrategyRecommender()
-        self.risk_predictor = RiskPredictionModel()
+        self.risk_predictor = RiskPredictor()
         self.env_recommender = EnvironmentRecommender()
 
     def recommend_strategy(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -46,7 +46,7 @@ class RecommendationService:
 
         # Get risk assessment
         code_change = context.get('code_change', {})
-        risk_assessment = self.risk_predictor.predict_risk(code_change)
+        risk_assessment = self.risk_predictor.predict(code_change)
 
         # Get environment recommendations
         env_requirements = {
