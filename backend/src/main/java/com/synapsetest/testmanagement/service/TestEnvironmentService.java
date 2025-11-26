@@ -66,6 +66,37 @@ public class TestEnvironmentService {
     }
 
     /**
+     * Update environment
+     */
+    public TestEnvironment updateEnvironment(String id, TestEnvironment environmentUpdate) {
+        log.info("Updating test environment: {}", id);
+        TestEnvironment existing = getEnvironmentById(id);
+        
+        // Update fields
+        if (environmentUpdate.getName() != null) {
+            existing.setName(environmentUpdate.getName());
+        }
+        if (environmentUpdate.getDescription() != null) {
+            existing.setDescription(environmentUpdate.getDescription());
+        }
+        if (environmentUpdate.getUrl() != null) {
+            existing.setUrl(environmentUpdate.getUrl());
+        }
+        if (environmentUpdate.getConfig() != null) {
+            existing.setConfig(environmentUpdate.getConfig());
+        }
+        if (environmentUpdate.getStatus() != null) {
+            existing.setStatus(environmentUpdate.getStatus());
+        }
+        
+        existing.setUpdatedAt(LocalDateTime.now());
+        environmentMapper.update(existing);
+        
+        log.info("Updated environment: {}", id);
+        return existing;
+    }
+
+    /**
      * Update environment status
      */
     public TestEnvironment updateEnvironmentStatus(String id, String status) {
@@ -75,5 +106,22 @@ public class TestEnvironmentService {
         environmentMapper.update(environment);
         log.info("Updated environment {} status to {}", id, status);
         return environment;
+    }
+
+    /**
+     * Delete an environment
+     */
+    public void deleteEnvironment(String id) {
+        log.info("Deleting test environment: {}", id);
+        TestEnvironment environment = getEnvironmentById(id);
+        environmentMapper.deleteById(id);
+        log.info("Deleted environment: {}", id);
+    }
+
+    /**
+     * Get all environments (including all statuses)
+     */
+    public List<TestEnvironment> getAllEnvironments() {
+        return environmentMapper.selectAll();
     }
 }

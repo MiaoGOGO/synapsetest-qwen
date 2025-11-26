@@ -71,4 +71,45 @@ public class TestVersionService {
         versionMapper.insert(version);
         return version;
     }
+
+    /**
+     * Update a version
+     */
+    public TestVersion updateVersion(String id, TestVersion versionUpdate) {
+        log.info("Updating test version: {}", id);
+        TestVersion existing = getVersionById(id);
+        
+        // Update fields
+        if (versionUpdate.getName() != null) {
+            existing.setName(versionUpdate.getName());
+        }
+        if (versionUpdate.getDescription() != null) {
+            existing.setDescription(versionUpdate.getDescription());
+        }
+        if (versionUpdate.getProductVersion() != null) {
+            existing.setProductVersion(versionUpdate.getProductVersion());
+        }
+        if (versionUpdate.getReleaseDate() != null) {
+            existing.setReleaseDate(versionUpdate.getReleaseDate());
+        }
+        if (versionUpdate.getConfig() != null) {
+            existing.setConfig(versionUpdate.getConfig());
+        }
+        
+        existing.setUpdatedAt(LocalDateTime.now());
+        versionMapper.update(existing);
+        
+        log.info("Updated version: {}", id);
+        return existing;
+    }
+
+    /**
+     * Delete a version
+     */
+    public void deleteVersion(String id) {
+        log.info("Deleting test version: {}", id);
+        TestVersion version = getVersionById(id);
+        versionMapper.deleteById(id);
+        log.info("Deleted version: {}", id);
+    }
 }
