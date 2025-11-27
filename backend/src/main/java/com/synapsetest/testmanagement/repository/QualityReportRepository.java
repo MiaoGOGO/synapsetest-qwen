@@ -1,8 +1,7 @@
 package com.synapsetest.testmanagement.repository;
 
 import com.synapsetest.testmanagement.model.QualityReport;
-import org.springframework.context.annotation.Profile;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.apache.ibatis.annotations.Mapper;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -10,11 +9,11 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * QualityReport Repository (MongoDB)
+ * QualityReport Repository (MySQL/MyBatis)
  */
+@Mapper
 @Repository
-// @Profile("mongodb") // Temporarily disabled to show in Swagger UI
-public interface QualityReportRepository extends MongoRepository<QualityReport, String> {
+public interface QualityReportRepository {
 
     Optional<QualityReport> findByTaskId(String taskId);
 
@@ -23,4 +22,14 @@ public interface QualityReportRepository extends MongoRepository<QualityReport, 
     List<QualityReport> findByGeneratedAtBetween(LocalDateTime start, LocalDateTime end);
 
     List<QualityReport> findTop10ByOrderByGeneratedAtDesc();
+    
+    QualityReport save(QualityReport qualityReport);
+    
+    QualityReport update(QualityReport qualityReport);
+    
+    void deleteById(String id);
+    
+    Optional<QualityReport> findById(String id);
+    
+    void deleteAll();
 }

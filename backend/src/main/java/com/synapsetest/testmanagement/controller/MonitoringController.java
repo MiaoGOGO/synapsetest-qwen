@@ -25,7 +25,6 @@ import java.util.Map;
 @RestController
 @RequestMapping(ApiVersion.V1 + "/monitoring")
 @RequiredArgsConstructor
-// @Profile("mongodb") // Temporarily disabled to show in Swagger UI
 public class MonitoringController {
 
     private final MonitoringService monitoringService;

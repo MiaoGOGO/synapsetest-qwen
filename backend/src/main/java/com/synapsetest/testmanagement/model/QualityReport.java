@@ -55,18 +55,6 @@ public class QualityReport {
         private LocalDateTime executedAt;
     }
 
-    /**
-     * Risk Assessment inner class
-     */
-    @Data
-    public static class RiskAssessment {
-        private String overallRisk; // LOW, MEDIUM, HIGH, CRITICAL
-        private Double riskScore; // 0.0 - 1.0
-        private List<String> highRiskModules;
-        private List<String> recommendations;
-        private Map<String, Double> moduleRiskScores;
-    }
-
     public enum Status {
         GENERATING, COMPLETED, ARCHIVED
     }

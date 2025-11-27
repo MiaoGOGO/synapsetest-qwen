@@ -1,8 +1,7 @@
 package com.synapsetest.testmanagement.repository;
 
 import com.synapsetest.testmanagement.model.MonitoringData;
-import org.springframework.context.annotation.Profile;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.apache.ibatis.annotations.Mapper;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -10,11 +9,11 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * MonitoringData Repository (MongoDB)
+ * MonitoringData Repository (MySQL/MyBatis)
  */
+@Mapper
 @Repository
-// @Profile("mongodb") // Temporarily disabled to show in Swagger UI
-public interface MonitoringDataRepository extends MongoRepository<MonitoringData, String> {
+public interface MonitoringDataRepository {
 
     Optional<MonitoringData> findByTaskId(String taskId);
 
@@ -25,4 +24,14 @@ public interface MonitoringDataRepository extends MongoRepository<MonitoringData
     List<MonitoringData> findByTimestampBetween(LocalDateTime start, LocalDateTime end);
 
     List<MonitoringData> findTop20ByOrderByTimestampDesc();
+    
+    MonitoringData save(MonitoringData monitoringData);
+    
+    MonitoringData update(MonitoringData monitoringData);
+    
+    void deleteById(String id);
+    
+    Optional<MonitoringData> findById(String id);
+    
+    void deleteAll();
 }

@@ -161,6 +161,7 @@ public class TestCaseService {
         TestCaseResponse response = new TestCaseResponse();
         response.setId(testCase.getId());
         response.setTitle(testCase.getTitle());
+        response.setCaseName(testCase.getTitle()); // 设置caseName字段，使用与title相同的值
         response.setDescription(testCase.getDescription());
         response.setSteps(testCase.getSteps());
         response.setExpectedResults(testCase.getExpectedResult());
