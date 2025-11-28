@@ -426,14 +426,15 @@ public class TestEnvironmentControllerIntegrationTest {
     @Sql(scripts = "/test-data-us1.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void updateEnvironment_PartialUpdate_ShouldUpdateOnlyProvidedFields() {
-        // Given: 准备部分更新请求（只更新description和url）
+        // Given: 准备部分更新请求（只更新description和url，保留name和status）
         String envId = "env-dev";
         String url = getBaseUrl() + "/" + envId;
 
         TestEnvironment updateRequest = new TestEnvironment();
+        updateRequest.setName("DEV环境"); // 保留原始名称（必填字段）
+        updateRequest.setStatus("AVAILABLE"); // 保留原始状态（必填字段）
         updateRequest.setDescription("更新后的描述信息");
         updateRequest.setUrl("http://dev-new-url.example.com");
-        // 不设置name和status，测试部分更新
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
