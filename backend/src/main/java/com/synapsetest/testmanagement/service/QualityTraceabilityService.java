@@ -47,7 +47,7 @@ public class QualityTraceabilityService {
 
             traceability.put("requirementId", requirementId);
             traceability.put("totalTestCases", relatedCases.size());
-            traceability.put("testCases", relatedCases.stream()
+            traceability.put("relatedTestCases", relatedCases.stream()
                     .map(tc -> Map.of(
                             "id", tc.getId(),
                             "title", tc.getTitle(),
@@ -125,27 +125,35 @@ public class QualityTraceabilityService {
     public Map<String, Object> generateTraceabilityMatrix(List<String> requirementIds) {
         log.info("Generating traceability matrix for {} requirements", requirementIds.size());
 
-        Map<String, Object> matrix = new HashMap<>();
+        Map<String, Object> result = new HashMap<>();
 
-        List<Map<String, Object>> rows = new ArrayList<>();
+        // Build matrix rows
+        List<Map<String, Object>> matrixRows = new ArrayList<>();
         for (String reqId : requirementIds) {
             Map<String, Object> row = traceRequirementCoverage(reqId);
-            rows.add(row);
+            matrixRows.add(row);
         }
 
-        matrix.put("requirements", rows);
-        matrix.put("totalRequirements", requirementIds.size());
+        result.put("matrix", matrixRows);
+
+        // Generate summary
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("totalRequirements", requirementIds.size());
 
         // Calculate overall coverage
-        long adequatelyCovered = rows.stream()
+        long adequatelyCovered = matrixRows.stream()
                 .filter(r -> "ADEQUATE".equals(r.get("coverageStatus")))
                 .count();
         double overallCoverage = requirementIds.isEmpty() ? 0.0 :
                 (double) adequatelyCovered / requirementIds.size() * 100;
 
-        matrix.put("overallCoverage", overallCoverage);
+        summary.put("overallCoverage", overallCoverage);
+        summary.put("adequatelyCovered", adequatelyCovered);
+        summary.put("insufficientCoverage", requirementIds.size() - adequatelyCovered);
 
-        return matrix;
+        result.put("summary", summary);
+
+        return result;
     }
 
     /**
@@ -155,6 +163,7 @@ public class QualityTraceabilityService {
         log.info("Checking release quality gates for task: {}", taskId);
 
         Map<String, Object> gateCheck = new HashMap<>();
+        gateCheck.put("taskId", taskId);
 
         try {
             QualityReport report = qualityReportService.getReportByTaskId(taskId);
@@ -184,6 +193,7 @@ public class QualityTraceabilityService {
             boolean allPassed = gates.stream()
                     .allMatch(g -> Boolean.TRUE.equals(g.get("passed")));
 
+            gateCheck.put("passed", allPassed);
             gateCheck.put("overallResult", allPassed ? "PASSED" : "FAILED");
             gateCheck.put("releaseRecommendation", allPassed ?
                     "Quality gates passed. Release is approved." :
@@ -192,6 +202,7 @@ public class QualityTraceabilityService {
         } catch (Exception e) {
             log.error("Error checking quality gates for task: {}", taskId, e);
             gateCheck.put("error", e.getMessage());
+            gateCheck.put("passed", false);
         }
 
         return gateCheck;
@@ -286,7 +297,8 @@ public class QualityTraceabilityService {
 
         analysis.put("changeId", changeId);
         analysis.put("changedFiles", changedFiles);
-        analysis.put("affectedTestCases", new ArrayList<>());
+        analysis.put("impactedTestCases", new ArrayList<>());  // Changed from affectedTestCases
+        analysis.put("suggestedTestCases", new ArrayList<>());  // Added
         analysis.put("recommendedTestSuite", "CORE");
         analysis.put("estimatedTestTime", "30 minutes");
         analysis.put("riskLevel", "MEDIUM");

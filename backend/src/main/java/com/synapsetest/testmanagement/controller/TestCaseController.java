@@ -2,6 +2,7 @@ package com.synapsetest.testmanagement.controller;
 
 import com.synapsetest.testmanagement.constants.ApiVersion;
 import com.synapsetest.testmanagement.dto.*;
+import com.synapsetest.testmanagement.dto.request.GenerateTestCaseRequest;
 import com.synapsetest.testmanagement.dto.response.TestCaseResponse;
 import com.synapsetest.testmanagement.service.AITestCaseGenerationService;
 import com.synapsetest.testmanagement.service.AITestCaseOptimizationService;
@@ -65,7 +66,7 @@ public class TestCaseController {
     @PostMapping("/generate")
     public ResponseEntity<ApiResponse<Map<String, Object>>> generateTestCases(
             @Parameter(description = "AI测试用例生成请求", required = true)
-            @Valid @RequestBody AITestCaseGenerationRequest request) {
+            @Valid @RequestBody GenerateTestCaseRequest request) {
 
         if (aiGenerationService == null) {
             return ResponseEntity
@@ -73,12 +74,26 @@ public class TestCaseController {
                     .body(ApiResponse.error("AI generation service is not available. Please activate mongodb profile."));
         }
 
-        List<TestCaseResponse> generatedCases = aiGenerationService.generateTestCases(request);
-        Double confidenceScore = aiGenerationService.calculateConfidenceScore(request);
+        // Convert GenerateTestCaseRequest to AITestCaseGenerationRequest
+        AITestCaseGenerationRequest aiRequest = new AITestCaseGenerationRequest();
+        aiRequest.setInput(request.getRequirementText());
+        aiRequest.setTestType("FUNCTIONAL");
+
+        List<TestCaseResponse> generatedCases = aiGenerationService.generateTestCases(aiRequest);
+        Double confidenceScore = aiGenerationService.calculateConfidenceScore(aiRequest);
+
+        // Apply deduplication if requested
+        int duplicatesRemoved = 0;
+        if (Boolean.TRUE.equals(request.getEnableDeduplication()) && aiOptimizationService != null) {
+            int originalSize = generatedCases.size();
+            generatedCases = aiOptimizationService.deduplicateTestCases(generatedCases);
+            duplicatesRemoved = originalSize - generatedCases.size();
+        }
 
         Map<String, Object> result = Map.of(
-                "testCases", generatedCases,
-                "confidenceScore", confidenceScore,
+                "test_cases", generatedCases,
+                "confidence_score", confidenceScore,
+                "duplicates_removed", duplicatesRemoved,
                 "count", generatedCases.size()
         );
 
@@ -114,6 +129,41 @@ public class TestCaseController {
     }
 
     /**
+     * Batch save test cases
+     * POST /api/v1/test-cases/batch
+     */
+    @Operation(
+            summary = "批量保存测试用例",
+            description = "批量保存多个测试用例"
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "201",
+            description = "批量创建成功"
+    )
+    @PostMapping("≈")
+    public ResponseEntity<Map<String, Object>> batchSaveTestCases(
+            @Parameter(description = "批量测试用例请求", required = true)
+            @RequestBody Map<String, List<Map<String, Object>>> request,
+            @Parameter(description = "用户ID", required = false, example = "zhangsan")
+            @RequestHeader(value = "X-User-Id", defaultValue = "system") String userId) {
+
+        List<Map<String, Object>> testCases = request.get("test_cases");
+        if (testCases == null || testCases.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "test_cases cannot be empty"));
+        }
+
+        List<String> savedIds = testCaseService.batchSaveTestCases(testCases, userId);
+
+        Map<String, Object> response = Map.of(
+                "saved_count", savedIds.size(),
+                "saved_ids", savedIds
+        );
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
      * Get test case by ID
      * GET /api/v1/test-cases/{id}
      */
@@ -127,14 +177,34 @@ public class TestCaseController {
     }
 
     /**
-     * Get all test cases
+     * Get all test cases or filter by parameters
      * GET /api/v1/test-cases
      */
-    @Operation(summary = "获取所有测试用例", description = "获取系统中所有的测试用例列表")
+    @Operation(summary = "获取测试用例列表", description = "获取系统中所有的测试用例列表或按条件筛选")
     @GetMapping
-    public ResponseEntity<ApiResponse<List<TestCaseResponse>>> getAllTestCases() {
-        List<TestCaseResponse> response = testCaseService.getAllTestCases();
-        return ResponseEntity.ok(ApiResponse.success(response));
+    public ResponseEntity<Map<String, Object>> getAllTestCases(
+            @Parameter(description = "是否AI生成", required = false)
+            @RequestParam(required = false) Boolean ai_generated,
+            @Parameter(description = "模块名称", required = false)
+            @RequestParam(required = false) String module,
+            @Parameter(description = "最小置信度", required = false)
+            @RequestParam(required = false) Double min_confidence) {
+
+        List<TestCaseResponse> testCases;
+
+        if (ai_generated != null || module != null || min_confidence != null) {
+            // Apply filters
+            testCases = testCaseService.getTestCasesWithFilters(ai_generated, module, min_confidence);
+        } else {
+            testCases = testCaseService.getAllTestCases();
+        }
+
+        Map<String, Object> response = Map.of(
+                "content", testCases,
+                "total", testCases.size()
+        );
+
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -194,9 +264,9 @@ public class TestCaseController {
      * DELETE /api/v1/test-cases/{id}
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteTestCase(@PathVariable String id) {
+    public ResponseEntity<Void> deleteTestCase(@PathVariable String id) {
         testCaseService.deleteTestCase(id);
-        return ResponseEntity.ok(ApiResponse.success("Test case deleted successfully", null));
+        return ResponseEntity.noContent().build();
     }
 
     /**

@@ -10,7 +10,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -155,6 +158,100 @@ public class TestCaseService {
     }
 
     /**
+     * Batch save test cases
+     */
+    public List<String> batchSaveTestCases(List<Map<String, Object>> testCaseMaps, String userId) {
+        log.info("Batch saving {} test cases by user: {}", testCaseMaps.size(), userId);
+
+        List<String> savedIds = new ArrayList<>();
+
+        for (Map<String, Object> tcMap : testCaseMaps) {
+            TestCase testCase = new TestCase();
+            testCase.setId(UUID.randomUUID().toString());
+            testCase.setTitle((String) tcMap.get("case_name"));
+            testCase.setDescription((String) tcMap.getOrDefault("description", ""));
+
+            // Parse steps - could be a List or a String
+            Object stepsObj = tcMap.get("steps");
+            if (stepsObj instanceof List) {
+                testCase.setSteps((List<String>) stepsObj);
+            } else if (stepsObj instanceof String) {
+                // If it's a string, wrap it in a list
+                testCase.setSteps(Collections.singletonList((String) stepsObj));
+            }
+
+            // Parse expected_result - could be a Map or a String
+            Object expectedResultObj = tcMap.get("expected_result");
+            if (expectedResultObj instanceof Map) {
+                testCase.setExpectedResult(expectedResultObj.toString());
+            } else if (expectedResultObj instanceof String) {
+                testCase.setExpectedResult((String) expectedResultObj);
+            }
+
+            // Parse priority - could be Integer or String
+            Object priorityObj = tcMap.getOrDefault("priority", "5");
+            int priority;
+            if (priorityObj instanceof Integer) {
+                priority = (Integer) priorityObj;
+            } else if (priorityObj instanceof String) {
+                String priorityStr = (String) priorityObj;
+                if ("HIGH".equalsIgnoreCase(priorityStr)) {
+                    priority = 8;
+                } else if ("MEDIUM".equalsIgnoreCase(priorityStr)) {
+                    priority = 5;
+                } else if ("LOW".equalsIgnoreCase(priorityStr)) {
+                    priority = 3;
+                } else if ("CRITICAL".equalsIgnoreCase(priorityStr)) {
+                    priority = 10;
+                } else {
+                    priority = Integer.parseInt(priorityStr);
+                }
+            } else {
+                priority = 5;
+            }
+            testCase.setPriority(priority);
+
+            testCase.setType((String) tcMap.get("type"));
+            testCase.setStatus(TestCase.TestCaseStatus.DRAFT.name());
+            testCase.setTags(Collections.emptyList());
+            testCase.setRelatedRequirement((String) tcMap.getOrDefault("module", ""));
+            testCase.setCreatedBy(userId);
+            testCase.setCreatedAt(LocalDateTime.now());
+            testCase.setUpdatedAt(LocalDateTime.now());
+
+            testCaseMapper.insert(testCase);
+            savedIds.add(testCase.getId());
+        }
+
+        log.info("Batch saved {} test cases successfully", savedIds.size());
+        return savedIds;
+    }
+
+    /**
+     * Get test cases with filters
+     */
+    public List<TestCaseResponse> getTestCasesWithFilters(Boolean aiGenerated, String module, Double minConfidence) {
+        log.info("Getting test cases with filters: aiGenerated={}, module={}, minConfidence={}",
+                aiGenerated, module, minConfidence);
+
+        // For now, return all test cases as filtering by AI-related fields
+        // would require additional database schema changes
+        // This is a placeholder implementation
+        List<TestCase> testCases = testCaseMapper.selectAll();
+
+        // Apply module filter if provided
+        if (module != null && !module.isEmpty()) {
+            testCases = testCases.stream()
+                    .filter(tc -> module.equals(tc.getRelatedRequirement()))
+                    .collect(Collectors.toList());
+        }
+
+        return testCases.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Convert entity to response DTO
      */
     private TestCaseResponse convertToResponse(TestCase testCase) {
@@ -173,6 +270,10 @@ public class TestCaseService {
         response.setCreatedAt(testCase.getCreatedAt());
         response.setUpdatedAt(testCase.getUpdatedAt());
         response.setCreatedBy(testCase.getCreatedBy());
+
+        // Set AI-related fields (default values for now)
+        response.setAi_generated(false);
+        response.setAi_confidence(0.0);
 
         return response;
     }

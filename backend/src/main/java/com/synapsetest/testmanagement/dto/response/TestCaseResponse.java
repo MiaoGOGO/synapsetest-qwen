@@ -25,5 +25,9 @@ public class TestCaseResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;
+
+    // AI-related fields
+    private Boolean ai_generated;  // Whether this test case was AI-generated
+    private Double ai_confidence;  // AI confidence score (0.0-1.0)
 }
 

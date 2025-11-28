@@ -29,31 +29,19 @@ public class QualityReport {
 
     private String summary;
 
+    // Use standalone TestResult class
     private List<TestResult> testResults;
 
     private Map<String, Integer> defectStats; // severity -> count
 
     private Map<String, Object> performanceMetrics;
 
+    // Use standalone RiskAssessment class
     private RiskAssessment riskAssessment;
 
     private LocalDateTime generatedAt;
 
     private String status; // GENERATING, COMPLETED, ARCHIVED
-
-    /**
-     * Test Result inner class
-     */
-    @Data
-    public static class TestResult {
-        private String testCaseId;
-        private String testCaseName;
-        private String status; // PASSED, FAILED, SKIPPED, BLOCKED
-        private Long executionTime; // milliseconds
-        private String error;
-        private String screenshot;
-        private LocalDateTime executedAt;
-    }
 
     public enum Status {
         GENERATING, COMPLETED, ARCHIVED

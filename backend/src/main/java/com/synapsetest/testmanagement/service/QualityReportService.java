@@ -3,6 +3,7 @@ package com.synapsetest.testmanagement.service;
 import com.synapsetest.testmanagement.exception.ResourceNotFoundException;
 import com.synapsetest.testmanagement.model.QualityReport;
 import com.synapsetest.testmanagement.model.RiskAssessment;
+import com.synapsetest.testmanagement.model.TestResult;
 import com.synapsetest.testmanagement.mapper.QualityReportMapper;
 import com.synapsetest.testmanagement.mapper.RiskAssessmentMapper;
 import com.synapsetest.testmanagement.mapper.TestResultMapper;
@@ -32,7 +33,7 @@ public class QualityReportService {
     /**
      * Generate quality report for a test task
      */
-    public QualityReport generateReport(String taskId, List<QualityReport.TestResult> testResults) {
+    public QualityReport generateReport(String taskId, List<TestResult> testResults) {
         log.info("Generating quality report for task: {}", taskId);
 
         QualityReport report = new QualityReport();
@@ -68,9 +69,9 @@ public class QualityReportService {
         
         // Save test results if any
         if (testResults != null && !testResults.isEmpty()) {
-            for (QualityReport.TestResult result : testResults) {
+            for (TestResult result : testResults) {
                 // 创建新的测试结果对象并设置报告ID
-                QualityReport.TestResult dbResult = new QualityReport.TestResult();
+                TestResult dbResult = new TestResult();
                 dbResult.setTestCaseId(result.getTestCaseId());
                 dbResult.setTestCaseName(result.getTestCaseName());
                 dbResult.setStatus(result.getStatus());
@@ -105,7 +106,7 @@ public class QualityReportService {
         }
 
         // Load associated test results
-        List<QualityReport.TestResult> testResults = testResultMapper.selectByReportId(id);
+        List<TestResult> testResults = testResultMapper.selectByReportId(id);
         if (!testResults.isEmpty()) {
             report.setTestResults(testResults);
         }
@@ -130,7 +131,7 @@ public class QualityReportService {
         QualityReport report = reports.get(0);
         
         // Load associated test results
-        List<QualityReport.TestResult> testResults = testResultMapper.selectByReportId(report.getId());
+        List<TestResult> testResults = testResultMapper.selectByReportId(report.getId());
         if (!testResults.isEmpty()) {
             report.setTestResults(testResults);
         }
@@ -157,7 +158,7 @@ public class QualityReportService {
     /**
      * Calculate defect statistics
      */
-    private Map<String, Integer> calculateDefectStats(List<QualityReport.TestResult> testResults) {
+    private Map<String, Integer> calculateDefectStats(List<TestResult> testResults) {
         Map<String, Integer> stats = new HashMap<>();
         stats.put("critical", 0);
         stats.put("major", 0);
@@ -165,7 +166,7 @@ public class QualityReportService {
         stats.put("total", 0);
 
         int failedCount = 0;
-        for (QualityReport.TestResult result : testResults) {
+        for (TestResult result : testResults) {
             if ("FAILED".equals(result.getStatus())) {
                 failedCount++;
                 // Simple heuristic for severity classification
@@ -192,7 +193,7 @@ public class QualityReportService {
     /**
      * Calculate performance metrics
      */
-    private Map<String, Object> calculatePerformanceMetrics(List<QualityReport.TestResult> testResults) {
+    private Map<String, Object> calculatePerformanceMetrics(List<TestResult> testResults) {
         Map<String, Object> metrics = new HashMap<>();
 
         if (testResults.isEmpty()) {
@@ -205,7 +206,7 @@ public class QualityReportService {
         long maxTime = 0;
         int count = 0;
 
-        for (QualityReport.TestResult result : testResults) {
+        for (TestResult result : testResults) {
             if (result.getExecutionTime() != null) {
                 long time = result.getExecutionTime();
                 totalTime += time;
@@ -238,7 +239,7 @@ public class QualityReportService {
     /**
      * Assess risk based on test results
      */
-    private RiskAssessment assessRisk(List<QualityReport.TestResult> testResults,
+    private RiskAssessment assessRisk(List<TestResult> testResults,
                                                       Map<String, Integer> defectStats) {
         RiskAssessment assessment = new RiskAssessment();
 
@@ -277,7 +278,7 @@ public class QualityReportService {
     /**
      * Calculate overall risk score
      */
-    private double calculateRiskScore(List<QualityReport.TestResult> testResults,
+    private double calculateRiskScore(List<TestResult> testResults,
                                        Map<String, Integer> defectStats) {
         if (testResults.isEmpty()) {
             return 0.0;
@@ -304,12 +305,12 @@ public class QualityReportService {
     /**
      * Identify high-risk modules
      */
-    private List<String> identifyHighRiskModules(List<QualityReport.TestResult> testResults) {
+    private List<String> identifyHighRiskModules(List<TestResult> testResults) {
         // Simple implementation: modules with multiple failures
         // In production: use ML to identify patterns
         Map<String, Integer> moduleFailures = new HashMap<>();
 
-        for (QualityReport.TestResult result : testResults) {
+        for (TestResult result : testResults) {
             if ("FAILED".equals(result.getStatus()) && result.getTestCaseName() != null) {
                 // Extract module from test case name (simple heuristic)
                 String module = extractModuleName(result.getTestCaseName());
@@ -373,12 +374,12 @@ public class QualityReportService {
     /**
      * Calculate risk scores for each module
      */
-    private Map<String, Double> calculateModuleRiskScores(List<QualityReport.TestResult> testResults) {
+    private Map<String, Double> calculateModuleRiskScores(List<TestResult> testResults) {
         Map<String, Double> moduleScores = new HashMap<>();
         Map<String, Integer> moduleTotal = new HashMap<>();
         Map<String, Integer> moduleFailures = new HashMap<>();
 
-        for (QualityReport.TestResult result : testResults) {
+        for (TestResult result : testResults) {
             if (result.getTestCaseName() != null) {
                 String module = extractModuleName(result.getTestCaseName());
                 moduleTotal.put(module, moduleTotal.getOrDefault(module, 0) + 1);
@@ -402,7 +403,7 @@ public class QualityReportService {
     /**
      * Generate report summary
      */
-    private String generateSummary(List<QualityReport.TestResult> testResults,
+    private String generateSummary(List<TestResult> testResults,
                                     Map<String, Integer> defectStats,
                                     RiskAssessment riskAssessment) {
         long passedCount = testResults.stream()

@@ -1,6 +1,6 @@
 package com.synapsetest.testmanagement.mapper;
 
-import com.synapsetest.testmanagement.model.QualityReport;
+import com.synapsetest.testmanagement.model.TestResult;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -17,29 +17,29 @@ public interface TestResultMapper {
     /**
      * 插入测试结果
      */
-    int insert(QualityReport.TestResult testResult);
+    int insert(TestResult testResult);
 
     /**
      * 批量插入测试结果
      */
-    int insertBatch(@Param("testResults") List<QualityReport.TestResult> testResults);
+    int insertBatch(@Param("testResults") List<TestResult> testResults);
 
     /**
      * 根据报告ID查询测试结果列表
      */
-    List<QualityReport.TestResult> selectByReportId(String reportId);
+    List<TestResult> selectByReportId(String reportId);
 
     /**
      * 根据报告ID和状态查询
      */
-    List<QualityReport.TestResult> selectByReportIdAndStatus(
+    List<TestResult> selectByReportIdAndStatus(
             @Param("reportId") String reportId,
             @Param("status") String status);
 
     /**
      * 更新测试结果
      */
-    int update(QualityReport.TestResult testResult);
+    int update(TestResult testResult);
 
     /**
      * 根据报告ID删除测试结果
