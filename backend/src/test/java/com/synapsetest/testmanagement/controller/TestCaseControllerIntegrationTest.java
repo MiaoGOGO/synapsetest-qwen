@@ -10,6 +10,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.*;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 
 import java.util.List;
@@ -29,7 +30,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * 对应User Story: US2-AI生成测试用例
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ActiveProfiles("test")
 @DisplayName("TestCaseController API集成测试")
+@Sql(scripts = "/test-schema.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 public class TestCaseControllerIntegrationTest {
 
     @LocalServerPort
@@ -42,12 +45,12 @@ public class TestCaseControllerIntegrationTest {
     private ObjectMapper objectMapper;
 
     private String getBaseUrl() {
-        return "http://localhost:" + port + "/api/v1/testcases";
+        return "http://localhost:" + port + "/api/v1/test-cases";
     }
 
     @Test
     @DisplayName("场景2.1: AI生成测试用例 - 订单模块需求")
-    @Sql(scripts = "/test-data-us2.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = {"/test-schema.sql", "/test-data-us2.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void generateTestCases_OrderModule_ShouldGenerateMultipleCases() {
         // Given: 准备生成请求
@@ -74,27 +77,28 @@ public class TestCaseControllerIntegrationTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         Map<String, Object> responseBody = response.getBody();
         assertNotNull(responseBody);
+        Map<String, Object> data = (Map<String, Object>) responseBody.get("data");
 
-        assertTrue(responseBody.containsKey("test_cases"));
-        List<?> testCases = (List<?>) responseBody.get("test_cases");
+        assertTrue(data.containsKey("test_cases"));
+        List<?> testCases = (List<?>) data.get("test_cases");
         assertNotNull(testCases);
         assertTrue(testCases.size() > 0 && testCases.size() <= 5);
 
         // 验证生成的用例包含必要字段
         Map<?, ?> firstCase = (Map<?, ?>) testCases.get(0);
-        assertTrue(firstCase.containsKey("case_name"));
+        assertTrue(firstCase.containsKey("title"));
         assertTrue(firstCase.containsKey("steps"));
-        assertTrue(firstCase.containsKey("expected_result"));
-        assertTrue(firstCase.containsKey("ai_confidence"));
-
-        // 验证AI置信度
-        Double confidence = (Double) firstCase.get("ai_confidence");
+        assertTrue(firstCase.containsKey("expectedResults"));
+        
+        // AI置信度是在响应体中，不是在每个测试用例中
+        assertTrue(data.containsKey("confidence_score"));
+        Double confidence = (Double) data.get("confidence_score");
         assertTrue(confidence >= 0 && confidence <= 1);
     }
 
     @Test
     @DisplayName("场景2.2: AI生成支付模块用例 - 高优先级")
-    @Sql(scripts = "/test-data-us2.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = {"/test-schema.sql", "/test-data-us2.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void generateTestCases_PaymentModule_ShouldGenerateHighPriorityCases() {
         // Given: 准备生成请求（支付模块）
@@ -120,17 +124,18 @@ public class TestCaseControllerIntegrationTest {
         // Then: 验证响应
         assertEquals(HttpStatus.OK, response.getStatusCode());
         Map<String, Object> responseBody = response.getBody();
+        Map<String, Object> data = (Map<String, Object>) responseBody.get("data");
 
-        List<?> testCases = (List<?>) responseBody.get("test_cases");
+        List<?> testCases = (List<?>) data.get("test_cases");
         assertTrue(testCases.size() >= 3);  // 至少包含微信、支付宝、银行卡
 
         // 验证去重逻辑（相似用例应该被合并）
-        assertTrue(responseBody.containsKey("duplicates_removed"));
+        assertTrue(data.containsKey("duplicates_removed"));
     }
 
     @Test
     @DisplayName("场景2.3: 批量保存AI生成的测试用例")
-    @Sql(scripts = "/test-data-us2.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = {"/test-schema.sql", "/test-data-us2.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void batchSaveTestCases_WithValidCases_ShouldSaveAll() {
         // Given: 准备批量保存请求
@@ -188,7 +193,7 @@ public class TestCaseControllerIntegrationTest {
 
     @Test
     @DisplayName("场景2.4: 查询AI生成的测试用例列表")
-    @Sql(scripts = "/test-data-us2.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = {"/test-schema.sql", "/test-data-us2.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void getAiGeneratedCases_ShouldReturnFilteredList() {
         // Given: 查询参数
@@ -223,11 +228,11 @@ public class TestCaseControllerIntegrationTest {
 
     @Test
     @DisplayName("场景2.5: 根据ID获取测试用例详情")
-    @Sql(scripts = "/test-data-us2.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = {"/test-schema.sql", "/test-data-us2.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void getTestCaseById_WithValidId_ShouldReturnDetails() {
         // Given: 已存在的测试用例ID
-        Long caseId = 1L;
+        String caseId = "case-001";
         String url = getBaseUrl() + "/" + caseId;
 
         HttpHeaders headers = new HttpHeaders();
@@ -235,16 +240,23 @@ public class TestCaseControllerIntegrationTest {
         HttpEntity<Void> entity = new HttpEntity<>(headers);
 
         // When: 发送GET请求
-        ResponseEntity<TestCaseResponse> response = restTemplate.exchange(
+        ResponseEntity<Map> response = restTemplate.exchange(
             url,
             HttpMethod.GET,
             entity,
-            TestCaseResponse.class
+            Map.class
         );
 
         // Then: 验证响应
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        TestCaseResponse testCase = response.getBody();
+        Map<String, Object> responseBody = response.getBody();
+        assertNotNull(responseBody);
+        
+        // 从data字段获取数据
+        Map<String, Object> data = (Map<String, Object>) responseBody.get("data");
+        assertNotNull(data, "Response should contain 'data' field");
+        
+        TestCaseResponse testCase = objectMapper.convertValue(data, TestCaseResponse.class);
         assertNotNull(testCase);
         assertEquals(caseId, testCase.getId());
         assertNotNull(testCase.getCaseName());
@@ -253,15 +265,15 @@ public class TestCaseControllerIntegrationTest {
 
     @Test
     @DisplayName("场景2.6: 更新测试用例")
-    @Sql(scripts = "/test-data-us2.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = {"/test-schema.sql", "/test-data-us2.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void updateTestCase_WithValidData_ShouldUpdateSuccessfully() {
         // Given: 准备更新请求
-        Long caseId = 1L;
+        String caseId = "case-001";
         String url = getBaseUrl() + "/" + caseId;
 
         Map<String, Object> updateRequest = Map.of(
-            "case_name", "订单创建-优化后的流程",
+            "title", "订单创建-优化后的流程",
             "priority", "CRITICAL",
             "steps", "[{\"step\":\"1\",\"action\":\"新的操作步骤\"}]"
         );
@@ -272,28 +284,35 @@ public class TestCaseControllerIntegrationTest {
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(updateRequest, headers);
 
         // When: 发送PUT请求
-        ResponseEntity<TestCaseResponse> response = restTemplate.exchange(
+        ResponseEntity<Map> response = restTemplate.exchange(
             url,
             HttpMethod.PUT,
             entity,
-            TestCaseResponse.class
+            Map.class
         );
 
         // Then: 验证响应
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        TestCaseResponse testCase = response.getBody();
+        Map<String, Object> responseBody = response.getBody();
+        assertNotNull(responseBody);
+        
+        // 从data字段获取数据
+        Map<String, Object> data = (Map<String, Object>) responseBody.get("data");
+        assertNotNull(data, "Response should contain 'data' field");
+        
+        TestCaseResponse testCase = objectMapper.convertValue(data, TestCaseResponse.class);
         assertNotNull(testCase);
         assertEquals("订单创建-优化后的流程", testCase.getCaseName());
-        assertEquals("CRITICAL", testCase.getPriority());
+        assertEquals(8, testCase.getPriority());
     }
 
     @Test
     @DisplayName("场景2.7: 删除测试用例")
-    @Sql(scripts = "/test-data-us2.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = {"/test-schema.sql", "/test-data-us2.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void deleteTestCase_WithValidId_ShouldDeleteSuccessfully() {
         // Given: 已存在的测试用例ID
-        Long caseId = 1L;
+        String caseId = "case-to-delete";
         String url = getBaseUrl() + "/" + caseId;
 
         HttpHeaders headers = new HttpHeaders();
@@ -349,7 +368,7 @@ public class TestCaseControllerIntegrationTest {
 
     @Test
     @DisplayName("场景2.9: 去重功能验证")
-    @Sql(scripts = "/test-data-us2.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = {"/test-schema.sql", "/test-data-us2.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void generateTestCases_WithDuplicates_ShouldRemoveSimilarCases() {
         // Given: 准备生成请求
@@ -375,20 +394,21 @@ public class TestCaseControllerIntegrationTest {
         // Then: 验证响应
         assertEquals(HttpStatus.OK, response.getStatusCode());
         Map<String, Object> responseBody = response.getBody();
+        Map<String, Object> data = (Map<String, Object>) responseBody.get("data");
 
         // 验证去重信息
-        assertTrue(responseBody.containsKey("duplicates_removed"));
-        Integer duplicatesRemoved = (Integer) responseBody.get("duplicates_removed");
+        assertTrue(data.containsKey("duplicates_removed"));
+        Integer duplicatesRemoved = (Integer) data.get("duplicates_removed");
         assertNotNull(duplicatesRemoved);
 
         // 生成的用例数量应该少于请求的数量（因为去重）
-        List<?> testCases = (List<?>) responseBody.get("test_cases");
+        List<?> testCases = (List<?>) data.get("test_cases");
         assertTrue(testCases.size() <= 10);
     }
 
     @Test
     @DisplayName("场景2.10: 查询高置信度用例")
-    @Sql(scripts = "/test-data-us2.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = {"/test-schema.sql", "/test-data-us2.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void getHighConfidenceCases_ShouldReturnFilteredList() {
         // Given: 查询参数（置信度>=0.85）

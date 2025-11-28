@@ -9,7 +9,7 @@
         <result property="title" column="title"/>
         <result property="description" column="description"/>
         <result property="steps" column="steps" typeHandler="com.synapsetest.testmanagement.config.JsonTypeHandler"/>
-        <result property="expectedResult" column="expected_result"/>
+        <result property="expectedResult" column="expected_results"/>
         <result property="priority" column="priority"/>
         <result property="type" column="type"/>
         <result property="status" column="status"/>
@@ -58,7 +58,7 @@
     <!-- Insert -->
     <insert id="insert" parameterType="com.synapsetest.testmanagement.model.TestCase">
         INSERT INTO test_cases(
-            id, title, description, type, status, priority, expected_result,
+            id, title, description, type, status, priority, expected_results,
             related_requirement, steps, tags, created_at, updated_at, created_by
         ) VALUES (
             #{id},
@@ -85,7 +85,7 @@
             type = #{type},
             status = #{status},
             priority = #{priority},
-            expected_result = #{expectedResult},
+            expected_results = #{expectedResult},
             related_requirement = #{relatedRequirement},
             steps = #{steps, typeHandler=com.synapsetest.testmanagement.config.JsonTypeHandler},
             tags = #{tags, typeHandler=com.synapsetest.testmanagement.config.JsonTypeHandler},

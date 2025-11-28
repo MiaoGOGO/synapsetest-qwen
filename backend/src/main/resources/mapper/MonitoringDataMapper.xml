@@ -17,28 +17,52 @@
         <result property="startTime" column="start_time"/>
         <result property="estimatedEndTime" column="estimated_end_time"/>
         <result property="actualEndTime" column="actual_end_time"/>
-        <result property="resourceUsage" column="resource_usage" typeHandler="com.synapsetest.testmanagement.config.JsonTypeHandler"/>
-        <result property="performanceMetrics" column="performance_metrics" typeHandler="com.synapsetest.testmanagement.config.JsonTypeHandler"/>
+        <result property="resourceUsage" column="resource_usage" typeHandler="com.synapsetest.testmanagement.config.JsonMapTypeHandler"/>
+        <result property="performanceMetrics" column="performance_metrics" typeHandler="com.synapsetest.testmanagement.config.JsonMapTypeHandler"/>
         <result property="timestamp" column="timestamp"/>
         <result property="environment" column="environment"/>
         <result property="version" column="version"/>
-        <result property="createdAt" column="created_at"/>
-        <result property="updatedAt" column="updated_at"/>
     </resultMap>
+
+    <!-- Insert -->
+    <insert id="insert" parameterType="com.synapsetest.testmanagement.model.MonitoringData">
+        INSERT INTO monitoring_data (
+            id, task_id, status, progress, executed_cases, 
+            total_cases, passed_cases, failed_cases, skipped_cases,
+            start_time, estimated_end_time, actual_end_time,
+            resource_usage, performance_metrics, timestamp,
+            environment, version
+        ) VALUES (
+            #{id}, #{taskId}, #{status}, #{progress}, #{executedCases}, 
+            #{totalCases}, #{passedCases}, #{failedCases}, #{skippedCases},
+            #{startTime}, #{estimatedEndTime}, #{actualEndTime},
+            #{resourceUsage, typeHandler=com.synapsetest.testmanagement.config.JsonMapTypeHandler},
+            #{performanceMetrics, typeHandler=com.synapsetest.testmanagement.config.JsonMapTypeHandler},
+            #{timestamp}, #{environment}, #{version}
+        )
+        <selectKey resultType="com.synapsetest.testmanagement.model.MonitoringData" keyProperty="id" order="AFTER">
+            SELECT * FROM monitoring_data WHERE id = LAST_INSERT_ID()
+        </selectKey>
+    </insert>
 
     <!-- Select by ID -->
     <select id="selectById" resultMap="MonitoringDataResultMap">
         SELECT * FROM monitoring_data WHERE id = #{id}
     </select>
 
-    <!-- Select All -->
-    <select id="selectAll" resultMap="MonitoringDataResultMap">
-        SELECT * FROM monitoring_data ORDER BY timestamp DESC
-    </select>
-
     <!-- Select by Task ID -->
     <select id="selectByTaskId" resultMap="MonitoringDataResultMap">
-        SELECT * FROM monitoring_data WHERE task_id = #{taskId} ORDER BY timestamp DESC
+        SELECT * FROM monitoring_data WHERE task_id = #{taskId} ORDER BY timestamp DESC LIMIT 1
+    </select>
+
+    <!-- Select by Task IDs -->
+    <select id="selectByTaskIds" resultMap="MonitoringDataResultMap">
+        SELECT * FROM monitoring_data 
+        WHERE task_id IN
+        <foreach item="taskId" collection="taskIds" open="(" separator="," close=")">
+            #{taskId}
+        </foreach>
+        ORDER BY timestamp DESC
     </select>
 
     <!-- Select by Status -->
@@ -46,61 +70,21 @@
         SELECT * FROM monitoring_data WHERE status = #{status} ORDER BY timestamp DESC
     </select>
 
-    <!-- Select by Environment -->
-    <select id="selectByEnvironment" resultMap="MonitoringDataResultMap">
-        SELECT * FROM monitoring_data WHERE environment = #{environment} ORDER BY timestamp DESC
-    </select>
-
-    <!-- Select by Timestamp Between -->
-    <select id="selectByTimestampBetween" resultMap="MonitoringDataResultMap">
-        SELECT * FROM monitoring_data 
+    <!-- Select by Time Range -->
+    <select id="selectByTimeRange" resultMap="MonitoringDataResultMap">
+        SELECT * FROM monitoring_data
         WHERE timestamp BETWEEN #{startTime} AND #{endTime}
         ORDER BY timestamp DESC
     </select>
 
-    <!-- Select Latest by Task ID -->
-    <select id="selectLatestByTaskId" resultMap="MonitoringDataResultMap">
-        SELECT * FROM monitoring_data 
-        WHERE task_id = #{taskId} 
-        ORDER BY timestamp DESC 
-        LIMIT 1
+    <!-- Select Latest 20 -->
+    <select id="selectLatest20" resultMap="MonitoringDataResultMap">
+        SELECT * FROM monitoring_data ORDER BY timestamp DESC LIMIT 20
     </select>
-
-    <!-- Insert -->
-    <insert id="insert" parameterType="com.synapsetest.testmanagement.model.MonitoringData">
-        INSERT INTO monitoring_data(
-            id, task_id, status, progress, executed_cases, total_cases,
-            passed_cases, failed_cases, skipped_cases, start_time,
-            estimated_end_time, actual_end_time, resource_usage, 
-            performance_metrics, timestamp, environment, version,
-            created_at, updated_at
-        ) VALUES (
-            #{id},
-            #{taskId},
-            #{status},
-            #{progress},
-            #{executedCases},
-            #{totalCases},
-            #{passedCases},
-            #{failedCases},
-            #{skippedCases},
-            #{startTime},
-            #{estimatedEndTime},
-            #{actualEndTime},
-            #{resourceUsage, typeHandler=com.synapsetest.testmanagement.config.JsonTypeHandler},
-            #{performanceMetrics, typeHandler=com.synapsetest.testmanagement.config.JsonTypeHandler},
-            #{timestamp},
-            #{environment},
-            #{version},
-            #{createdAt},
-            #{updatedAt}
-        )
-    </insert>
 
     <!-- Update -->
     <update id="update" parameterType="com.synapsetest.testmanagement.model.MonitoringData">
-        UPDATE monitoring_data SET
-            task_id = #{taskId},
+        UPDATE monitoring_data SET 
             status = #{status},
             progress = #{progress},
             executed_cases = #{executedCases},
@@ -111,18 +95,48 @@
             start_time = #{startTime},
             estimated_end_time = #{estimatedEndTime},
             actual_end_time = #{actualEndTime},
-            resource_usage = #{resourceUsage, typeHandler=com.synapsetest.testmanagement.config.JsonTypeHandler},
-            performance_metrics = #{performanceMetrics, typeHandler=com.synapsetest.testmanagement.config.JsonTypeHandler},
+            resource_usage = #{resourceUsage, typeHandler=com.synapsetest.testmanagement.config.JsonMapTypeHandler},
+            performance_metrics = #{performanceMetrics, typeHandler=com.synapsetest.testmanagement.config.JsonMapTypeHandler},
             timestamp = #{timestamp},
             environment = #{environment},
-            version = #{version},
-            updated_at = #{updatedAt}
+            version = #{version}
         WHERE id = #{id}
+        <selectKey resultType="com.synapsetest.testmanagement.model.MonitoringData" keyProperty="id" order="AFTER">
+            SELECT * FROM monitoring_data WHERE id = #{id}
+        </selectKey>
+    </update>
+
+    <!-- Update Progress -->
+    <update id="updateProgress">
+        UPDATE monitoring_data SET 
+            progress = #{progress},
+            executed_cases = #{executedCases},
+            passed_cases = #{passedCases},
+            failed_cases = #{failedCases},
+            skipped_cases = #{skippedCases},
+            timestamp = CURRENT_TIMESTAMP
+        WHERE task_id = #{taskId}
+    </update>
+
+    <!-- Update Status -->
+    <update id="updateStatus">
+        UPDATE monitoring_data SET 
+            status = #{status},
+            timestamp = CURRENT_TIMESTAMP
+        WHERE task_id = #{taskId}
     </update>
 
     <!-- Delete by ID -->
     <delete id="deleteById">
         DELETE FROM monitoring_data WHERE id = #{id}
+    </delete>
+    
+    <select id="findById" resultMap="MonitoringDataResultMap">
+        SELECT * FROM monitoring_data WHERE id = #{id}
+    </select>
+    
+    <delete id="deleteAll">
+        DELETE FROM monitoring_data
     </delete>
 
     <!-- Delete by Task ID -->
@@ -130,10 +144,18 @@
         DELETE FROM monitoring_data WHERE task_id = #{taskId}
     </delete>
 
-    <!-- Count -->
-    <select id="count" resultType="int">
-        SELECT COUNT(*) FROM monitoring_data
+    <!-- Delete by Time Range -->
+    <delete id="deleteByTimeRange">
+        DELETE FROM monitoring_data WHERE timestamp BETWEEN #{startTime} AND #{endTime}
+    </delete>
+    
+    <!-- Select Recent Data -->
+    <select id="selectRecentData" resultMap="MonitoringDataResultMap">
+        SELECT * FROM monitoring_data ORDER BY timestamp DESC LIMIT #{limit}
     </select>
-
+    
+    <!-- Select by Environment -->
+    <select id="selectByEnvironment" resultMap="MonitoringDataResultMap">
+        SELECT * FROM monitoring_data WHERE environment = #{environment} ORDER BY timestamp DESC
+    </select>
 </mapper>
-

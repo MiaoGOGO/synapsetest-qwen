@@ -3,6 +3,7 @@ package com.synapsetest.testmanagement.controller;
 import com.synapsetest.testmanagement.constants.ApiVersion;
 import com.synapsetest.testmanagement.dto.ApiResponse;
 import com.synapsetest.testmanagement.model.QualityReport;
+import com.synapsetest.testmanagement.service.MonitoringService;
 import com.synapsetest.testmanagement.service.QualityReportService;
 import com.synapsetest.testmanagement.service.QualityTraceabilityService;
 import com.synapsetest.testmanagement.service.ReportingService;
@@ -15,8 +16,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Report Controller
@@ -34,6 +37,7 @@ public class ReportController {
     private final QualityReportService qualityReportService;
     private final ReportingService reportingService;
     private final QualityTraceabilityService traceabilityService;
+    private final MonitoringService monitoringService;
 
     /**
      * Get quality report by ID
@@ -41,11 +45,12 @@ public class ReportController {
      */
     @Operation(summary = "获取质量报告", description = "根据报告ID获取详细的质量报告")
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<QualityReport>> getReport(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getReport(
             @Parameter(description = "报告ID", required = true, example = "report-123456")
             @PathVariable String id) {
         QualityReport report = qualityReportService.getReportById(id);
-        return ResponseEntity.ok(ApiResponse.success(report));
+        Map<String, Object> response = transformReportToMap(report);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     /**
@@ -54,11 +59,26 @@ public class ReportController {
      */
     @Operation(summary = "根据任务获取质量报告", description = "根据测试任务ID获取对应的质量报告")
     @GetMapping("/task/{taskId}")
-    public ResponseEntity<ApiResponse<QualityReport>> getReportByTaskId(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getReportByTaskId(
             @Parameter(description = "任务ID", required = true, example = "task-123456")
             @PathVariable String taskId) {
         QualityReport report = qualityReportService.getReportByTaskId(taskId);
-        return ResponseEntity.ok(ApiResponse.success(report));
+        Map<String, Object> response = transformReportToMap(report);
+        // Get passRate from monitoring data
+        try {
+            var monitoringData = monitoringService.getMonitoringDataByTaskId(taskId);
+            response.put("passRate", monitoringData.getPassRate());
+        } catch (Exception e) {
+            // If monitoring data not available, calculate from test results
+            if (report.getTestResults() != null && !report.getTestResults().isEmpty()) {
+                long passedCount = report.getTestResults().stream()
+                        .filter(r -> "PASSED".equals(r.getStatus()))
+                        .count();
+                double passRate = (double) passedCount / report.getTestResults().size() * 100;
+                response.put("passRate", passRate);
+            }
+        }
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     /**
@@ -67,9 +87,12 @@ public class ReportController {
      */
     @Operation(summary = "获取最近的报告", description = "获取最近生成的质量报告列表")
     @GetMapping("/recent")
-    public ResponseEntity<ApiResponse<List<QualityReport>>> getRecentReports() {
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getRecentReports() {
         List<QualityReport> reports = qualityReportService.getRecentReports();
-        return ResponseEntity.ok(ApiResponse.success(reports));
+        List<Map<String, Object>> transformedReports = reports.stream()
+                .map(this::transformReportToMap)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(ApiResponse.success(transformedReports));
     }
 
     /**
@@ -95,7 +118,12 @@ public class ReportController {
             @Parameter(description = "任务1的ID", required = true, example = "task-111111")
             @RequestParam String taskId1,
             @Parameter(description = "任务2的ID", required = true, example = "task-222222")
-            @RequestParam String taskId2) {
+            @RequestParam(required = false) String taskId2) {
+        // Validate parameters
+        if (taskId2 == null || taskId2.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("taskId2 parameter is required"));
+        }
         Map<String, Object> comparison = reportingService.generateComparisonReport(taskId1, taskId2);
         return ResponseEntity.ok(ApiResponse.success(comparison));
     }
@@ -141,6 +169,11 @@ public class ReportController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> generateTraceabilityMatrix(
             @Parameter(description = "需求ID列表", required = true)
             @RequestBody List<String> requirementIds) {
+        // Validate input
+        if (requirementIds == null || requirementIds.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("requirementIds list cannot be empty"));
+        }
         Map<String, Object> matrix = traceabilityService.generateTraceabilityMatrix(requirementIds);
         return ResponseEntity.ok(ApiResponse.success(matrix));
     }
@@ -184,5 +217,25 @@ public class ReportController {
             @RequestBody List<String> changedFiles) {
         Map<String, Object> analysis = traceabilityService.analyzeChangeImpact(changeId, changedFiles);
         return ResponseEntity.ok(ApiResponse.success(analysis));
+    }
+
+    /**
+     * Transform QualityReport to Map with expected field names
+     */
+    private Map<String, Object> transformReportToMap(QualityReport report) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", report.getId());
+        map.put("taskId", report.getTaskId());
+        map.put("reportName", report.getName()); // Transform "name" to "reportName"
+        map.put("name", report.getName());
+        map.put("summary", report.getSummary());
+        map.put("generatedAt", report.getGeneratedAt());
+        map.put("createdAt", report.getGeneratedAt()); // Add "createdAt" alias for "generatedAt"
+        map.put("status", report.getStatus());
+        map.put("defectStats", report.getDefectStats());
+        map.put("performanceMetrics", report.getPerformanceMetrics());
+        map.put("testResults", report.getTestResults());
+        map.put("riskAssessment", report.getRiskAssessment());
+        return map;
     }
 }
