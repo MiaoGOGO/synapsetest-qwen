@@ -492,6 +492,8 @@ public class TestVersionControllerIntegrationTest {
         String url = getBaseUrl() + "/" + versionId;
 
         TestVersion updateRequest = new TestVersion();
+        updateRequest.setName("v2.1.0"); // 保留原始名称（必填字段）
+        updateRequest.setProductVersion("2.1.0"); // 保留原始产品版本（必填字段）
         Map<String, String> newConfig = new HashMap<>();
         newConfig.put("performance", "optimized");
         newConfig.put("security", "enhanced");
