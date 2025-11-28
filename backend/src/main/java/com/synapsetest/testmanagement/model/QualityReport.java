@@ -31,44 +31,20 @@ public class QualityReport extends BaseEntity {
 
     private String summary;
 
+    // Use standalone TestResult class
     private List<TestResult> testResults;
 
     private Map<String, Integer> defectStats; // severity -> count
 
     private Map<String, Object> performanceMetrics;
 
+    // Use standalone RiskAssessment class
     private RiskAssessment riskAssessment;
 
     private LocalDateTime generatedAt;
 
     @NotBlank(message = "Status is required")
     private String status; // GENERATING, COMPLETED, ARCHIVED
-
-    /**
-     * Test Result inner class
-     */
-    @Data
-    public static class TestResult {
-        private String testCaseId;
-        private String testCaseName;
-        private String status; // PASSED, FAILED, SKIPPED, BLOCKED
-        private Long executionTime; // milliseconds
-        private String error;
-        private String screenshot;
-        private LocalDateTime executedAt;
-    }
-
-    /**
-     * Risk Assessment inner class
-     */
-    @Data
-    public static class RiskAssessment {
-        private String overallRisk; // LOW, MEDIUM, HIGH, CRITICAL
-        private Double riskScore; // 0.0 - 1.0
-        private List<String> highRiskModules;
-        private List<String> recommendations;
-        private Map<String, Double> moduleRiskScores;
-    }
 
     public enum Status {
         GENERATING, COMPLETED, ARCHIVED

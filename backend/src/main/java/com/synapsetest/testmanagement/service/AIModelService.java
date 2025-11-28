@@ -1,15 +1,14 @@
 package com.synapsetest.testmanagement.service;
 
 import com.synapsetest.testmanagement.exception.ResourceNotFoundException;
-import com.synapsetest.testmanagement.mapper.AIModelMapper;
 import com.synapsetest.testmanagement.model.AIModel;
+import com.synapsetest.testmanagement.mapper.AIModelMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * AI Model Service
@@ -36,7 +35,17 @@ public class AIModelService {
     public AIModel registerModel(AIModel model) {
         log.info("Registering AI model: {} version {}", model.getName(), model.getVersion());
 
-        model.setId(UUID.randomUUID().toString());
+        // Check if model with same name and version exists
+        if (aiModelMapper.selectByNameAndVersion(model.getName(), model.getVersion()).isPresent()) {
+            throw new RuntimeException("Model with name '" + model.getName() + "' and version '" + 
+                    model.getVersion() + "' already exists");
+        }
+
+        // Generate UUID if not provided
+        if (model.getId() == null) {
+            model.setId(java.util.UUID.randomUUID().toString());
+        }
+
         model.setCreatedAt(LocalDateTime.now());
         model.setUpdatedAt(LocalDateTime.now());
         model.setSecurityStatus(AIModel.SecurityStatus.PENDING.name());
@@ -53,23 +62,16 @@ public class AIModelService {
      * Get model by ID
      */
     public AIModel getModelById(String id) {
-        AIModel model = aiModelMapper.selectById(id);
-        if (model == null) {
-            throw new ResourceNotFoundException("AIModel", "id", id);
-        }
-        return model;
+        return aiModelMapper.selectById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("AIModel", "id", id));
     }
 
     /**
      * Get model by name and version
      */
     public AIModel getModelByNameAndVersion(String name, String version) {
-        List<AIModel> models = aiModelMapper.selectByName(name);
-        return models.stream()
-                .filter(m -> version.equals(m.getVersion()))
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("AIModel",
-                        String.format("name=%s, version=%s", name, version), ""));
+        return aiModelMapper.selectByNameAndVersion(name, version)
+                .orElseThrow(() -> new ResourceNotFoundException("AIModel", "name and version", name + ":" + version));
     }
 
     /**
@@ -90,10 +92,9 @@ public class AIModelService {
         model.setLastScanTime(LocalDateTime.now());
         model.setUpdatedAt(LocalDateTime.now());
 
-        aiModelMapper.update(model);
-
         log.info("Updated security scan for model {}: {}", modelId, securityStatus);
 
+        aiModelMapper.update(model);
         return model;
     }
 
@@ -106,10 +107,9 @@ public class AIModelService {
         model.setComplianceStatus(complianceStatus);
         model.setUpdatedAt(LocalDateTime.now());
 
-        aiModelMapper.update(model);
-
         log.info("Updated compliance status for model {}: {}", modelId, complianceStatus);
 
+        aiModelMapper.update(model);
         return model;
     }
 
@@ -169,11 +169,9 @@ public class AIModelService {
      * Delete model
      */
     public void deleteModel(String modelId) {
-        AIModel model = aiModelMapper.selectById(modelId);
-        if (model == null) {
-            throw new ResourceNotFoundException("AIModel", "id", modelId);
-        }
-
+        // Check if model exists
+        getModelById(modelId);
+        
         aiModelMapper.deleteById(modelId);
         log.info("AI model deleted: {}", modelId);
     }
