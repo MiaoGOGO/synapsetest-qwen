@@ -53,7 +53,7 @@ class RAGTestCaseGenerator:
         include_edge_cases: bool = True
     ) -> Dict[str, Any]:
         """
-        Generate test cases from requirement document
+        Generate test cases from requirement document   
 
         Args:
             requirement_text: Requirement document text

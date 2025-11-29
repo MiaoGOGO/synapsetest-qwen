@@ -5,6 +5,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional
 import logging
+import json
+import time
 
 from services.testcase_service import (
     TestCaseGenerationService,
@@ -65,15 +67,22 @@ async def generate_testcases(request: GenerationRequest):
 
     Uses RAG approach with LLM + historical cases + company standards
     """
+    start_time = time.time()
     try:
-        logger.info(f"Received generation request for module: {request.module}")
+        # Log request
+        logger.info(f"[REQUEST] POST /testcase/generate\n{json.dumps(request.dict(), ensure_ascii=False, indent=2)}")
 
         result = generation_service.generate_testcases(request.dict())
+
+        # Log response
+        elapsed_time = time.time() - start_time
+        logger.info(f"[RESPONSE] POST /testcase/generate - Status: SUCCESS, Time: {elapsed_time:.2f}s\n{json.dumps(result, ensure_ascii=False, indent=2, default=str)}")
 
         return result
 
     except Exception as e:
-        logger.error(f"Test case generation failed: {e}", exc_info=True)
+        elapsed_time = time.time() - start_time
+        logger.error(f"[RESPONSE] POST /testcase/generate - Status: FAILED, Time: {elapsed_time:.2f}s, Error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -82,15 +91,22 @@ async def batch_generate(request: BatchGenerationRequest):
     """
     Batch generate test cases for multiple requirements
     """
+    start_time = time.time()
     try:
-        logger.info(f"Received batch generation request for {len(request.requirements)} requirements")
+        # Log request
+        logger.info(f"[REQUEST] POST /testcase/generate/batch\n{json.dumps(request.dict(), ensure_ascii=False, indent=2)}")
 
         result = generation_service.batch_generate(request.dict())
+
+        # Log response
+        elapsed_time = time.time() - start_time
+        logger.info(f"[RESPONSE] POST /testcase/generate/batch - Status: SUCCESS, Time: {elapsed_time:.2f}s\n{json.dumps(result, ensure_ascii=False, indent=2, default=str)}")
 
         return result
 
     except Exception as e:
-        logger.error(f"Batch generation failed: {e}", exc_info=True)
+        elapsed_time = time.time() - start_time
+        logger.error(f"[RESPONSE] POST /testcase/generate/batch - Status: FAILED, Time: {elapsed_time:.2f}s, Error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -101,16 +117,25 @@ async def submit_feedback(request: FeedbackRequest):
 
     Helps improve model through reinforcement learning
     """
+    start_time = time.time()
     try:
+        # Log request
+        logger.info(f"[REQUEST] POST /testcase/feedback\n{json.dumps(request.dict(), ensure_ascii=False, indent=2)}")
+
         result = generation_service.update_user_feedback(
             request_id=request.request_id,
             feedback=request.dict()
         )
 
+        # Log response
+        elapsed_time = time.time() - start_time
+        logger.info(f"[RESPONSE] POST /testcase/feedback - Status: SUCCESS, Time: {elapsed_time:.2f}s\n{json.dumps(result, ensure_ascii=False, indent=2, default=str)}")
+
         return result
 
     except Exception as e:
-        logger.error(f"Feedback submission failed: {e}", exc_info=True)
+        elapsed_time = time.time() - start_time
+        logger.error(f"[RESPONSE] POST /testcase/feedback - Status: FAILED, Time: {elapsed_time:.2f}s, Error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -119,16 +144,25 @@ async def deduplicate_testcases(request: DeduplicationRequest):
     """
     Deduplicate test cases using semantic similarity
     """
+    start_time = time.time()
     try:
+        # Log request
+        logger.info(f"[REQUEST] POST /testcase/optimize/deduplicate\n{json.dumps(request.dict(), ensure_ascii=False, indent=2)}")
+
         result = optimization_service.deduplicate(
             testcases=request.testcases,
             threshold=request.threshold
         )
 
+        # Log response
+        elapsed_time = time.time() - start_time
+        logger.info(f"[RESPONSE] POST /testcase/optimize/deduplicate - Status: SUCCESS, Time: {elapsed_time:.2f}s\n{json.dumps(result, ensure_ascii=False, indent=2, default=str)}")
+
         return result
 
     except Exception as e:
-        logger.error(f"Deduplication failed: {e}", exc_info=True)
+        elapsed_time = time.time() - start_time
+        logger.error(f"[RESPONSE] POST /testcase/optimize/deduplicate - Status: FAILED, Time: {elapsed_time:.2f}s, Error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -137,16 +171,25 @@ async def prioritize_testcases(request: PrioritizationRequest):
     """
     Prioritize test cases using multi-factor scoring
     """
+    start_time = time.time()
     try:
+        # Log request
+        logger.info(f"[REQUEST] POST /testcase/optimize/prioritize\n{json.dumps(request.dict(), ensure_ascii=False, indent=2)}")
+
         result = optimization_service.prioritize(
             testcases=request.testcases,
             custom_weights=request.custom_weights
         )
 
+        # Log response
+        elapsed_time = time.time() - start_time
+        logger.info(f"[RESPONSE] POST /testcase/optimize/prioritize - Status: SUCCESS, Time: {elapsed_time:.2f}s\n{json.dumps(result, ensure_ascii=False, indent=2, default=str)}")
+
         return result
 
     except Exception as e:
-        logger.error(f"Prioritization failed: {e}", exc_info=True)
+        elapsed_time = time.time() - start_time
+        logger.error(f"[RESPONSE] POST /testcase/optimize/prioritize - Status: FAILED, Time: {elapsed_time:.2f}s, Error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -155,21 +198,44 @@ async def analyze_quality(testcases: List[Dict[str, Any]]):
     """
     Analyze quality metrics of test cases
     """
+    start_time = time.time()
     try:
+        # Log request
+        logger.info(f"[REQUEST] POST /testcase/analyze/quality\n{json.dumps({'testcases': testcases}, ensure_ascii=False, indent=2)}")
+
         result = optimization_service.analyze_quality(testcases)
+
+        # Log response
+        elapsed_time = time.time() - start_time
+        logger.info(f"[RESPONSE] POST /testcase/analyze/quality - Status: SUCCESS, Time: {elapsed_time:.2f}s\n{json.dumps(result, ensure_ascii=False, indent=2, default=str)}")
 
         return result
 
     except Exception as e:
-        logger.error(f"Quality analysis failed: {e}", exc_info=True)
+        elapsed_time = time.time() - start_time
+        logger.error(f"[RESPONSE] POST /testcase/analyze/quality - Status: FAILED, Time: {elapsed_time:.2f}s, Error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {
-        'status': 'UP',
-        'service': 'testcase-generation',
-        'llm_available': True
-    }
+    start_time = time.time()
+    try:
+        logger.info(f"[REQUEST] GET /testcase/health")
+
+        result = {
+            'status': 'UP',
+            'service': 'testcase-generation',
+            'llm_available': True
+        }
+
+        elapsed_time = time.time() - start_time
+        logger.info(f"[RESPONSE] GET /testcase/health - Status: SUCCESS, Time: {elapsed_time:.2f}s\n{json.dumps(result, ensure_ascii=False, indent=2)}")
+
+        return result
+
+    except Exception as e:
+        elapsed_time = time.time() - start_time
+        logger.error(f"[RESPONSE] GET /testcase/health - Status: FAILED, Time: {elapsed_time:.2f}s, Error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

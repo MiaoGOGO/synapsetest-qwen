@@ -5,6 +5,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Dict, Any, Optional
 import logging
+import json
+import time
 
 from services.recommendation_service import RecommendationService
 
@@ -73,15 +75,22 @@ async def recommend_strategy(request: RecommendationRequest):
 
     Returns recommendation with test scope, environment, priority, etc.
     """
+    start_time = time.time()
     try:
-        logger.info(f"Received recommendation request for task: {request.task_id}")
+        # Log request
+        logger.info(f"[REQUEST] POST /recommendation/strategy\n{json.dumps(request.dict(), ensure_ascii=False, indent=2)}")
 
         result = recommendation_service.recommend_strategy(request.dict())
+
+        # Log response
+        elapsed_time = time.time() - start_time
+        logger.info(f"[RESPONSE] POST /recommendation/strategy - Status: SUCCESS, Time: {elapsed_time:.2f}s\n{json.dumps(result, ensure_ascii=False, indent=2, default=str)}")
 
         return result
 
     except Exception as e:
-        logger.error(f"Recommendation failed: {e}", exc_info=True)
+        elapsed_time = time.time() - start_time
+        logger.error(f"[RESPONSE] POST /recommendation/strategy - Status: FAILED, Time: {elapsed_time:.2f}s, Error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -93,27 +102,52 @@ async def explain_recommendation(
     """
     Get detailed explanation for a recommendation
     """
+    start_time = time.time()
     try:
+        # Log request
+        logger.info(f"[REQUEST] POST /recommendation/strategy/explain\n{json.dumps({'recommendation': recommendation, 'context': context.dict()}, ensure_ascii=False, indent=2)}")
+
         explanation = recommendation_service.get_recommendation_explanation(
             recommendation=recommendation,
             context=context.dict()
         )
 
-        return {
+        result = {
             'success': True,
             'explanation': explanation
         }
 
+        # Log response
+        elapsed_time = time.time() - start_time
+        logger.info(f"[RESPONSE] POST /recommendation/strategy/explain - Status: SUCCESS, Time: {elapsed_time:.2f}s\n{json.dumps(result, ensure_ascii=False, indent=2, default=str)}")
+
+        return result
+
     except Exception as e:
-        logger.error(f"Explanation failed: {e}", exc_info=True)
+        elapsed_time = time.time() - start_time
+        logger.error(f"[RESPONSE] POST /recommendation/strategy/explain - Status: FAILED, Time: {elapsed_time:.2f}s, Error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {
-        'status': 'UP',
-        'service': 'recommendation',
-        'models_loaded': True
-    }
+    start_time = time.time()
+    try:
+        logger.info(f"[REQUEST] GET /recommendation/health")
+
+        result = {
+            'status': 'UP',
+            'service': 'recommendation',
+            'models_loaded': True
+        }
+
+        elapsed_time = time.time() - start_time
+        logger.info(f"[RESPONSE] GET /recommendation/health - Status: SUCCESS, Time: {elapsed_time:.2f}s\n{json.dumps(result, ensure_ascii=False, indent=2)}")
+
+        return result
+
+    except Exception as e:
+        elapsed_time = time.time() - start_time
+        logger.error(f"[RESPONSE] GET /recommendation/health - Status: FAILED, Time: {elapsed_time:.2f}s, Error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
