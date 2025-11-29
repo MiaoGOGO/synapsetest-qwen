@@ -1,45 +1,46 @@
 package com.synapsetest.testmanagement.model;
 
+import com.synapsetest.testmanagement.entity.BaseEntity;
 import lombok.Data;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
+import lombok.EqualsAndHashCode;
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
 import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
  * AIModel Model
  * Represents an AI model with security audit status
- * Stored in MongoDB for flexible schema
+ * MyBatis POJO (removed MongoDB annotations)
  *
  * User Story 2: AI生成测试用例
  */
 @Data
-@Document(collection = "ai_models")
-public class AIModel {
+@EqualsAndHashCode(callSuper = true)
+public class AIModel extends BaseEntity {
 
-    @Id
-    private String id;
-
+    @NotBlank(message = "AI model name is required")
+    @Size(max = 100, message = "Name must not exceed 100 characters")
     private String name;
 
+    @NotBlank(message = "Version is required")
+    @Size(max = 50, message = "Version must not exceed 50 characters")
     private String version;
 
     private String description;
 
     private String filePath;
 
+    @NotBlank(message = "Security status is required")
     private String securityStatus; // PENDING, IN_REVIEW, APPROVED, REJECTED
 
     private String vulnerabilityScanResult;
 
     private LocalDateTime lastScanTime;
 
+    @NotBlank(message = "Compliance status is required")
     private String complianceStatus; // COMPLIANT, NON_COMPLIANT, PENDING
-
-    private LocalDateTime createdAt;
-
-    private LocalDateTime updatedAt;
 
     private Map<String, Object> metrics; // Model performance metrics
 

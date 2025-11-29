@@ -2,10 +2,9 @@ package com.synapsetest.testmanagement.service;
 
 import com.synapsetest.testmanagement.exception.ResourceNotFoundException;
 import com.synapsetest.testmanagement.model.AIModel;
-import com.synapsetest.testmanagement.repository.AIModelRepository;
+import com.synapsetest.testmanagement.mapper.AIModelMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -26,10 +25,9 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Profile("mongodb")
 public class AIModelService {
 
-    private final AIModelRepository aiModelRepository;
+    private final AIModelMapper aiModelMapper;
 
     /**
      * Register a new AI model
@@ -37,23 +35,34 @@ public class AIModelService {
     public AIModel registerModel(AIModel model) {
         log.info("Registering AI model: {} version {}", model.getName(), model.getVersion());
 
+        // Check if model with same name and version exists
+        if (aiModelMapper.selectByNameAndVersion(model.getName(), model.getVersion()).isPresent()) {
+            throw new RuntimeException("Model with name '" + model.getName() + "' and version '" + 
+                    model.getVersion() + "' already exists");
+        }
+
+        // Generate UUID if not provided
+        if (model.getId() == null) {
+            model.setId(java.util.UUID.randomUUID().toString());
+        }
+
         model.setCreatedAt(LocalDateTime.now());
         model.setUpdatedAt(LocalDateTime.now());
         model.setSecurityStatus(AIModel.SecurityStatus.PENDING.name());
         model.setComplianceStatus(AIModel.ComplianceStatus.PENDING.name());
 
-        AIModel saved = aiModelRepository.save(model);
+        aiModelMapper.insert(model);
 
-        log.info("AI model registered with ID: {}", saved.getId());
+        log.info("AI model registered with ID: {}", model.getId());
 
-        return saved;
+        return model;
     }
 
     /**
      * Get model by ID
      */
     public AIModel getModelById(String id) {
-        return aiModelRepository.findById(id)
+        return aiModelMapper.selectById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("AIModel", "id", id));
     }
 
@@ -61,16 +70,15 @@ public class AIModelService {
      * Get model by name and version
      */
     public AIModel getModelByNameAndVersion(String name, String version) {
-        return aiModelRepository.findByNameAndVersion(name, version)
-                .orElseThrow(() -> new ResourceNotFoundException("AIModel",
-                        String.format("name=%s, version=%s", name, version), ""));
+        return aiModelMapper.selectByNameAndVersion(name, version)
+                .orElseThrow(() -> new ResourceNotFoundException("AIModel", "name and version", name + ":" + version));
     }
 
     /**
      * Get all approved models
      */
     public List<AIModel> getApprovedModels() {
-        return aiModelRepository.findBySecurityStatus(AIModel.SecurityStatus.APPROVED.name());
+        return aiModelMapper.selectBySecurityStatus(AIModel.SecurityStatus.APPROVED.name());
     }
 
     /**
@@ -86,7 +94,8 @@ public class AIModelService {
 
         log.info("Updated security scan for model {}: {}", modelId, securityStatus);
 
-        return aiModelRepository.save(model);
+        aiModelMapper.update(model);
+        return model;
     }
 
     /**
@@ -100,7 +109,8 @@ public class AIModelService {
 
         log.info("Updated compliance status for model {}: {}", modelId, complianceStatus);
 
-        return aiModelRepository.save(model);
+        aiModelMapper.update(model);
+        return model;
     }
 
     /**
@@ -152,18 +162,17 @@ public class AIModelService {
      * Get models requiring security review
      */
     public List<AIModel> getModelsRequiringReview() {
-        return aiModelRepository.findBySecurityStatus(AIModel.SecurityStatus.IN_REVIEW.name());
+        return aiModelMapper.selectBySecurityStatus(AIModel.SecurityStatus.IN_REVIEW.name());
     }
 
     /**
      * Delete model
      */
     public void deleteModel(String modelId) {
-        if (!aiModelRepository.existsById(modelId)) {
-            throw new ResourceNotFoundException("AIModel", "id", modelId);
-        }
-
-        aiModelRepository.deleteById(modelId);
+        // Check if model exists
+        getModelById(modelId);
+        
+        aiModelMapper.deleteById(modelId);
         log.info("AI model deleted: {}", modelId);
     }
 }

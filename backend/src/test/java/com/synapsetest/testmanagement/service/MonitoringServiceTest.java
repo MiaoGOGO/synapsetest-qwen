@@ -1,19 +1,17 @@
 package com.synapsetest.testmanagement.service;
 
+import com.synapsetest.testmanagement.mapper.MonitoringDataMapper;
 import com.synapsetest.testmanagement.model.MonitoringData;
-import com.synapsetest.testmanagement.repository.MonitoringDataRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,19 +22,18 @@ import static org.mockito.Mockito.*;
  * TDD测试用例
  */
 @SpringBootTest
-@ActiveProfiles("mongodb")
 @DisplayName("监控服务 - 实时数据管理")
 class MonitoringServiceTest {
 
     @MockBean
-    private MonitoringDataRepository monitoringDataRepository;
+    private MonitoringDataMapper monitoringDataMapper;
 
     @Autowired
     private MonitoringService monitoringService;
 
     @Test
     @DisplayName("场景1.1: 创建监控数据记录")
-    void createMonitoringData_ShouldSaveToMongoDB() {
+    void createMonitoringData_ShouldSaveToDatabase() {
         // Given: 任务启动时的监控数据
         String taskId = "task-001";
         MonitoringData data = new MonitoringData();
@@ -46,8 +43,8 @@ class MonitoringServiceTest {
         data.setTotalCases(100);
         data.setExecutedCases(0);
 
-        when(monitoringDataRepository.findByTaskId(taskId)).thenReturn(Optional.of(data));
-        when(monitoringDataRepository.save(any())).thenReturn(data);
+        when(monitoringDataMapper.selectByTaskId(taskId)).thenReturn(Arrays.asList(data));
+        when(monitoringDataMapper.update(any())).thenReturn(1);
 
         // When
         MonitoringData saved = monitoringService.startMonitoring(taskId, 100);
@@ -66,8 +63,8 @@ class MonitoringServiceTest {
         // Given: 已执行25个用例，共100个
         String taskId = "task-001";
         MonitoringData existing = createMonitoringData(taskId, 100);
-        when(monitoringDataRepository.findByTaskId(taskId)).thenReturn(Optional.of(existing));
-        when(monitoringDataRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(monitoringDataMapper.selectByTaskId(taskId)).thenReturn(Arrays.asList(existing));
+        when(monitoringDataMapper.update(any())).thenReturn(1);
 
         // When: 更新进度
         MonitoringData updated = monitoringService.updateProgress(taskId, 25, 23, 2, 0);
@@ -127,8 +124,8 @@ class MonitoringServiceTest {
         );
 
         MonitoringData existing = createMonitoringData(taskId, 100);
-        when(monitoringDataRepository.findByTaskId(taskId)).thenReturn(Optional.of(existing));
-        when(monitoringDataRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(monitoringDataMapper.selectByTaskId(taskId)).thenReturn(Arrays.asList(existing));
+        when(monitoringDataMapper.update(any())).thenReturn(1);
 
         // When
         MonitoringData updated = monitoringService.updateResourceUsage(taskId, resourceUsage);
@@ -146,7 +143,7 @@ class MonitoringServiceTest {
             createMonitoringDataWithStatus("task-001", "RUNNING"),
             createMonitoringDataWithStatus("task-002", "RUNNING")
         );
-        when(monitoringDataRepository.findByStatus("RUNNING")).thenReturn(runningTasks);
+        when(monitoringDataMapper.selectByStatus("RUNNING")).thenReturn(runningTasks);
 
         // When
         List<MonitoringData> result = monitoringService.getRunningTasks();
@@ -167,7 +164,7 @@ class MonitoringServiceTest {
             createMonitoringDataWithStatus("task-004", "COMPLETED"),
             createMonitoringDataWithStatus("task-005", "FAILED")
         );
-        when(monitoringDataRepository.findTop20ByOrderByTimestampDesc()).thenReturn(recentData);
+        when(monitoringDataMapper.selectAll()).thenReturn(recentData);
 
         // When
         Map<String, Object> stats = monitoringService.getDashboardStatistics();

@@ -6,6 +6,7 @@ INSERT INTO test_tasks (id, name, description, environment, version, test_scope,
 
 INSERT INTO test_environments (id, name, url, status, created_at, updated_at) VALUES
 ('env-dev', 'DEV环境', 'http://dev.example.com', 'AVAILABLE', NOW(), NOW()),
+('env-test', 'TEST环境', 'http://test.example.com', 'AVAILABLE', NOW(), NOW()),
 ('env-staging', 'STAGING环境', 'http://staging.example.com', 'AVAILABLE', NOW(), NOW());
 
 INSERT INTO test_versions (id, name, product_version, release_date, created_at, updated_at) VALUES

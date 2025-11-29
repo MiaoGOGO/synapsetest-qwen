@@ -35,30 +35,24 @@ public class ReportingService {
 
         Map<String, Object> report = new HashMap<>();
 
-        try {
-            // Get quality report
-            QualityReport qualityReport = qualityReportService.getReportByTaskId(taskId);
-            report.put("qualityReport", qualityReport);
+        // Get quality report (will throw ResourceNotFoundException if not found)
+        QualityReport qualityReport = qualityReportService.getReportByTaskId(taskId);
+        report.put("qualityReport", qualityReport);
 
-            // Get monitoring data
-            MonitoringData monitoringData = monitoringService.getMonitoringDataByTaskId(taskId);
-            report.put("monitoringData", monitoringData);
+        // Get monitoring data (will throw ResourceNotFoundException if not found)
+        MonitoringData monitoringData = monitoringService.getMonitoringDataByTaskId(taskId);
+        report.put("monitoringData", monitoringData);
 
-            // Generate summary
-            Map<String, Object> summary = generateExecutionSummary(qualityReport, monitoringData);
-            report.put("summary", summary);
+        // Generate summary
+        Map<String, Object> summary = generateExecutionSummary(qualityReport, monitoringData);
+        report.put("summary", summary);
 
-            // Generate trends
-            Map<String, Object> trends = generateTrends(taskId);
-            report.put("trends", trends);
+        // Generate trends
+        Map<String, Object> trends = generateTrends(taskId);
+        report.put("trends", trends);
 
-            report.put("generatedAt", LocalDateTime.now());
-            report.put("taskId", taskId);
-
-        } catch (Exception e) {
-            log.error("Error generating comprehensive report for task: {}", taskId, e);
-            report.put("error", e.getMessage());
-        }
+        report.put("generatedAt", LocalDateTime.now());
+        report.put("taskId", taskId);
 
         return report;
     }
@@ -173,7 +167,7 @@ public class ReportingService {
     public Map<String, Object> generateComparisonReport(String taskId1, String taskId2) {
         log.info("Generating comparison report: {} vs {}", taskId1, taskId2);
 
-        Map<String, Object> comparison = new HashMap<>();
+        Map<String, Object> result = new HashMap<>();
 
         try {
             QualityReport report1 = qualityReportService.getReportByTaskId(taskId1);
@@ -182,35 +176,56 @@ public class ReportingService {
             MonitoringData data1 = monitoringService.getMonitoringDataByTaskId(taskId1);
             MonitoringData data2 = monitoringService.getMonitoringDataByTaskId(taskId2);
 
+            // Build task1 summary
+            Map<String, Object> task1Summary = new HashMap<>();
+            task1Summary.put("taskId", taskId1);
+            task1Summary.put("passRate", data1.getPassRate());
+            task1Summary.put("defects", report1.getDefectStats());
+            task1Summary.put("risk", report1.getRiskAssessment().getOverallRisk());
+            result.put("task1", task1Summary);
+
+            // Build task2 summary
+            Map<String, Object> task2Summary = new HashMap<>();
+            task2Summary.put("taskId", taskId2);
+            task2Summary.put("passRate", data2.getPassRate());
+            task2Summary.put("defects", report2.getDefectStats());
+            task2Summary.put("risk", report2.getRiskAssessment().getOverallRisk());
+            result.put("task2", task2Summary);
+
+            // Build comparison details
+            Map<String, Object> comparison = new HashMap<>();
+
             // Compare pass rates
             Map<String, Object> passRateComparison = new HashMap<>();
             passRateComparison.put("task1", data1.getPassRate());
             passRateComparison.put("task2", data2.getPassRate());
             passRateComparison.put("difference", data2.getPassRate() - data1.getPassRate());
-            comparison.put("passRateComparison", passRateComparison);
+            comparison.put("passRate", passRateComparison);
 
             // Compare defect counts
             Map<String, Object> defectComparison = new HashMap<>();
             defectComparison.put("task1", report1.getDefectStats());
             defectComparison.put("task2", report2.getDefectStats());
-            comparison.put("defectComparison", defectComparison);
+            comparison.put("defects", defectComparison);
 
             // Compare risk levels
             Map<String, Object> riskComparison = new HashMap<>();
             riskComparison.put("task1", report1.getRiskAssessment().getOverallRisk());
             riskComparison.put("task2", report2.getRiskAssessment().getOverallRisk());
-            comparison.put("riskComparison", riskComparison);
+            comparison.put("risk", riskComparison);
 
             // Overall comparison result
-            String result = determineComparisonResult(data1, data2, report1, report2);
-            comparison.put("result", result);
+            String comparisonResult = determineComparisonResult(data1, data2, report1, report2);
+            comparison.put("result", comparisonResult);
+
+            result.put("comparison", comparison);
 
         } catch (Exception e) {
             log.error("Error generating comparison report", e);
-            comparison.put("error", e.getMessage());
+            result.put("error", e.getMessage());
         }
 
-        return comparison;
+        return result;
     }
 
     /**

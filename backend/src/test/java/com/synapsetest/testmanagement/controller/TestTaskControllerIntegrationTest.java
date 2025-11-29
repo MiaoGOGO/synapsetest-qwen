@@ -47,7 +47,7 @@ public class TestTaskControllerIntegrationTest {
     private ObjectMapper objectMapper;
 
     private String getBaseUrl() {
-        return "http://localhost:" + port + "/api/v1/tasks";
+        return "http://localhost:" + port + "/api/v1/test-tasks";
     }
 
     @Test
@@ -175,7 +175,7 @@ public class TestTaskControllerIntegrationTest {
     @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void getTestTaskById_WithValidId_ShouldReturnTaskDetails() {
         // Given: 已存在的任务ID（通过SQL脚本插入）
-        Long taskId = 1L;
+        String taskId = "task-001"; // UUID from test-data-us1.sql
         String url = getBaseUrl() + "/" + taskId;
 
         HttpHeaders headers = new HttpHeaders();
@@ -204,7 +204,7 @@ public class TestTaskControllerIntegrationTest {
     @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void updateTaskStatus_WithValidData_ShouldUpdateSuccessfully() {
         // Given: 准备更新请求
-        Long taskId = 1L;
+        String taskId = "task-pending"; // UUID from test-data-us1.sql (PENDING status)
         String url = getBaseUrl() + "/" + taskId + "/status";
 
         Map<String, String> updateRequest = Map.of(
@@ -217,10 +217,10 @@ public class TestTaskControllerIntegrationTest {
         headers.set("X-User-Id", "zhangsan");
         HttpEntity<Map<String, String>> entity = new HttpEntity<>(updateRequest, headers);
 
-        // When: 发送PATCH请求
+        // When: 发送POST请求更新状态
         ResponseEntity<TestTaskResponse> response = restTemplate.exchange(
             url,
-            HttpMethod.PATCH,
+            HttpMethod.POST,
             entity,
             TestTaskResponse.class
         );
@@ -235,11 +235,11 @@ public class TestTaskControllerIntegrationTest {
     @Test
     @DisplayName("场景1.6: 参数验证 - 缺少必填字段")
     void createTestTask_WithMissingRequiredFields_ShouldReturnBadRequest() {
-        // Given: 准备不完整的请求（缺少taskName）
+        // Given: 准备不完整的请求（缺少taskName, modules, codeChangeInfo）
         CreateTestTaskRequest request = new CreateTestTaskRequest();
         request.setEnvironment("DEV");
         request.setVersion("v1.2.0");
-        // taskName未设置
+        // taskName、modules、codeChangeInfo未设置（这些都是必填字段）
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -257,15 +257,26 @@ public class TestTaskControllerIntegrationTest {
         // Then: 验证返回400错误
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         Map<String, Object> errorResponse = response.getBody();
-        assertNotNull(errorResponse);
-        assertTrue(errorResponse.containsKey("error") || errorResponse.containsKey("message"));
+        assertNotNull(errorResponse, "Error response should not be null");
+        
+        // 验证错误响应包含必要的字段
+        assertTrue(errorResponse.containsKey("message"), "Response should contain 'message' field");
+        assertEquals("Validation failed", errorResponse.get("message"), "Message should indicate validation failure");
+        
+        // 验证包含字段错误详情
+        assertTrue(errorResponse.containsKey("errors"), "Response should contain 'errors' field");
+        
+        @SuppressWarnings("unchecked")
+        Map<String, String> fieldErrors = (Map<String, String>) errorResponse.get("errors");
+        assertNotNull(fieldErrors, "Field errors should not be null");
+        assertTrue(fieldErrors.size() > 0, "Should have at least one field error");
     }
 
     @Test
     @DisplayName("场景1.7: 获取不存在的任务 - 返回404")
     void getTestTaskById_WithNonExistingId_ShouldReturnNotFound() {
         // Given: 不存在的任务ID
-        Long nonExistingId = 999999L;
+        String nonExistingId = "non-existing-task-uuid";
         String url = getBaseUrl() + "/" + nonExistingId;
 
         HttpHeaders headers = new HttpHeaders();
@@ -290,7 +301,7 @@ public class TestTaskControllerIntegrationTest {
     @Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void deleteTestTask_WithValidId_ShouldSoftDelete() {
         // Given: 已存在的任务ID
-        Long taskId = 1L;
+        String taskId = "task-001"; // UUID from test-data-us1.sql
         String url = getBaseUrl() + "/" + taskId;
 
         HttpHeaders headers = new HttpHeaders();
