@@ -20,7 +20,7 @@ CREATE TABLE test_cases (
     title VARCHAR(200) NOT NULL,
     description TEXT,
     steps JSON NOT NULL,
-    expected_results TEXT,
+    expected_result TEXT,
     type VARCHAR(20) NOT NULL,
     status VARCHAR(20) NOT NULL,
     priority INTEGER DEFAULT 0,

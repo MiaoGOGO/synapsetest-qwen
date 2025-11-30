@@ -11,7 +11,8 @@ from models.llm.qwen_model import create_llm_model
 from models.optimization.deduplicator import SemanticDeduplicator
 from models.optimization.prioritizer import TestCasePrioritizer
 from utils.prompt_builder import PromptBuilder, DocumentParser
-from data.mongodb_client import mongodb_client
+from data.db_factory import db_client  # Automatically uses MySQL or MongoDB
+from data.rag_manager import rag_manager
 from config import ai_config
 
 logger = logging.getLogger(__name__)
@@ -69,12 +70,17 @@ class RAGTestCaseGenerator:
         # Step 1: Parse document
         parsed_text = self.doc_parser.parse(requirement_text)
 
-        # Step 2: Retrieve similar cases (RAG)
-        similar_cases = mongodb_client.get_similar_testcases(module, limit=3)
-        logger.info(f"Retrieved {len(similar_cases)} similar historical cases")
+        # Step 2: Retrieve similar cases using RAG (Vector DB + MongoDB)
+        # This combines semantic search (ChromaDB) with complete data (MongoDB)
+        similar_cases = rag_manager.search_similar_testcases(
+            query_text=parsed_text,
+            top_k=3,
+            module_filter=module if module != 'unknown' else None
+        )
+        logger.info(f"Retrieved {len(similar_cases)} similar historical cases via RAG")
 
-        # Step 3: Load company standards
-        company_standards = mongodb_client.get_company_standards()
+        # Step 3: Load company standards from structured DB (MySQL/MongoDB)
+        company_standards = db_client.get_company_standards()
 
         # Step 4: Build prompt
         prompt = self.prompt_builder.build_generation_prompt(

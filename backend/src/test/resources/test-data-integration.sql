@@ -20,7 +20,7 @@ CREATE TABLE test_cases (
     title VARCHAR(200) NOT NULL,
     description TEXT,
     steps JSON NOT NULL,
-    expected_results TEXT,
+    expected_result TEXT,
     type VARCHAR(20) NOT NULL,
     status VARCHAR(20) NOT NULL,
     priority INTEGER DEFAULT 0,
@@ -94,7 +94,7 @@ CREATE TABLE quality_report_risk_assessment (
 -- 测试用例数据 (test_cases)
 -- ====================================
 INSERT INTO test_cases (
-    id, title, description, steps, expected_results,
+    id, title, description, steps, expected_result,
     type, status, priority, tags,
     related_requirement, created_by, created_at, updated_at
 ) VALUES

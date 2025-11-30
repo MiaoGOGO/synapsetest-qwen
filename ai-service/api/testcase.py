@@ -225,10 +225,10 @@ async def health_check():
         logger.info(f"[REQUEST] GET /testcase/health")
 
         result = {
-            'status': 'UP',
-            'service': 'testcase-generation',
-            'llm_available': True
-        }
+        'status': 'UP',
+        'service': 'testcase-generation',
+        'llm_available': True
+    }
 
         elapsed_time = time.time() - start_time
         logger.info(f"[RESPONSE] GET /testcase/health - Status: SUCCESS, Time: {elapsed_time:.2f}s\n{json.dumps(result, ensure_ascii=False, indent=2)}")

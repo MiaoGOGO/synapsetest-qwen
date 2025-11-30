@@ -26,9 +26,19 @@ class AIConfig:
     MILVUS_HOST: str = os.getenv('MILVUS_HOST', 'localhost')
     MILVUS_PORT: int = int(os.getenv('MILVUS_PORT', '19530'))
 
-    # MongoDB configuration
-    MONGODB_URI: str = os.getenv('MONGODB_URI', 'mongodb://localhost:27017')
-    MONGODB_DB: str = os.getenv('MONGODB_DB', 'synapsetest_ai')
+    # Vector database type (fixed to milvus)
+    VECTOR_DB_TYPE: str = 'milvus'
+
+    # MySQL configuration (Recommended, shared with Backend Service)
+    MYSQL_URI: str = os.getenv('MYSQL_URI', 'mysql://root:password@localhost:3306/synapsetest')
+    MYSQL_HOST: str = os.getenv('MYSQL_HOST', 'localhost')
+    MYSQL_PORT: int = int(os.getenv('MYSQL_PORT', '3306'))
+    MYSQL_USER: str = os.getenv('MYSQL_USER', 'root')
+    MYSQL_PASSWORD: str = os.getenv('MYSQL_PASSWORD', 'password')
+    MYSQL_DATABASE: str = os.getenv('MYSQL_DATABASE', 'synapsetest')
+    
+    # Database type (fixed to mysql)
+    DATABASE_TYPE: str = 'mysql'
 
     # Redis configuration
     REDIS_HOST: str = os.getenv('REDIS_HOST', 'localhost')
@@ -52,11 +62,15 @@ class AIConfig:
     LLM_API_BASE: Optional[str] = os.getenv('LLM_API_BASE', None)
 
     @classmethod
-    def get_mongodb_settings(cls) -> dict:
-        """Get MongoDB connection settings"""
+    def get_mysql_settings(cls) -> dict:
+        """Get MySQL connection settings"""
         return {
-            'uri': cls.MONGODB_URI,
-            'database': cls.MONGODB_DB
+            'uri': cls.MYSQL_URI,
+            'host': cls.MYSQL_HOST,
+            'port': cls.MYSQL_PORT,
+            'user': cls.MYSQL_USER,
+            'password': cls.MYSQL_PASSWORD,
+            'database': cls.MYSQL_DATABASE
         }
 
     @classmethod

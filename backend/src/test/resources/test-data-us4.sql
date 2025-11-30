@@ -68,7 +68,7 @@ VALUES
 ('1002', '测试任务-回归测试', 'PARTIAL', 'STAGING', '1.0.1', 'wangwu', 'RUNNING', 2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- 插入测试用例数据 (使用test-schema.sql的列名)
-INSERT INTO test_cases (id, title, description, steps, expected_results, type, priority, status, created_by, created_at, updated_at)
+INSERT INTO test_cases (id, title, description, steps, expected_result, type, priority, status, created_by, created_at, updated_at)
 VALUES
 ('2001', '登录验证测试', '验证用户登录功能', '[{"step": "打开登录页面"}, {"step": "输入用户名密码"}, {"step": "点击登录按钮"}]', '成功登录系统', 'FUNCTIONAL', 0, 'ACTIVE', 'zhangsan', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('2002', '数据查询性能测试', '测试系统查询性能', '[{"step": "输入查询条件"}, {"step": "执行查询"}, {"step": "记录响应时间"}]', '响应时间<3秒', 'PERFORMANCE', 0, 'ACTIVE', 'zhangsan', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
