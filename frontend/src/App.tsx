@@ -7,6 +7,7 @@ import {
   PlaySquareOutlined,
   BulbOutlined,
   HomeOutlined,
+  SettingOutlined,
 } from '@ant-design/icons'
 import './App.css'
 
@@ -17,6 +18,8 @@ import AITestCaseGeneration from './components/test-case/AITestCaseGeneration'
 import TestCaseList from './components/test-case/TestCaseList'
 import Dashboard from './components/monitoring/Dashboard'
 import QualityReport from './components/report/QualityReport'
+import TestVersionList from './components/test-version/TestVersionList'
+import TestEnvironmentList from './components/test-environment/TestEnvironmentList'
 
 const { Header, Content, Footer, Sider } = Layout
 
@@ -80,6 +83,21 @@ const App: React.FC = () => {
         {
           key: '/reports/quality',
           label: <Link to="/reports/quality">质量报告 (Quality)</Link>,
+        },
+      ],
+    },
+    {
+      key: 'config',
+      icon: <SettingOutlined />,
+      label: '配置管理 (Configuration)',
+      children: [
+        {
+          key: '/config/versions',
+          label: <Link to="/config/versions">测试版本 (Versions)</Link>,
+        },
+        {
+          key: '/config/environments',
+          label: <Link to="/config/environments">测试环境 (Environments)</Link>,
         },
       ],
     },
@@ -153,6 +171,8 @@ const App: React.FC = () => {
               path="/reports/quality"
               element={<QualityReport taskId={selectedTaskId} />}
             />
+            <Route path="/config/versions" element={<TestVersionList />} />
+            <Route path="/config/environments" element={<TestEnvironmentList />} />
           </Routes>
         </Content>
         <Footer style={{ textAlign: 'center', background: '#f0f2f5' }}>
