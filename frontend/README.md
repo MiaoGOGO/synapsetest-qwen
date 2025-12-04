@@ -1,0 +1,17 @@
+
+## 开发规范
+
+## 运行方式
+
+### 以独立项目运行
+
+```
+// 初始化项目
+npm install 
+
+// 开发模式
+yarn run dev 或者 yarn dev 或者 npm run dev
+
+// 构建
+yarn run build
+```
