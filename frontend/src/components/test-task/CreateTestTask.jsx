@@ -29,8 +29,8 @@ const CreateTestTask = () => {
         testTaskService.getVersions(),
       ])
 
-      setEnvironments(envResponse.data || [])
-      setVersions(versionResponse.data || [])
+      setEnvironments(envResponse || [])
+      setVersions(versionResponse || [])
     } catch (error) {
       message.error('Failed to load initial data')
     }
