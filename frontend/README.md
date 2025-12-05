@@ -12,6 +12,5 @@ npm install
 // 开发模式
 yarn run dev 或者 yarn dev 或者 npm run dev
 
-// 构建
-yarn run build
-```
+<!-- 本地联调注意 -->
+修改vite.config.ts 和 nginx.conf 文件中对应的地址
