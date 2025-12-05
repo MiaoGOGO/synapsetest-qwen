@@ -13,7 +13,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://10.56.58.50:8080', //改为对应的后端地址
         changeOrigin: true,
       },
     },
